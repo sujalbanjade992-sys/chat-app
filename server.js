@@ -9,7 +9,6 @@ const mongoURI = "mongodb+srv://sujalbanjade992_db_user:56oglUhQ9Tjv3SzI@cluster
 
 mongoose.connect(mongoURI).then(() => console.log("✅ DB Connected"));
 
-// We only save Global messages to keep DMs private/temporary
 const Msg = mongoose.model('Msg', {
     senderName: String,
     text: String,
@@ -23,33 +22,42 @@ const users = {};
 
 io.on('connection', async (socket) => {
     
-    // Send Global History on connect
+    // Load Global History
     const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
     socket.emit('load old msgs', history);
 
     socket.on('login', (username) => {
-        users[socket.id] = { name: username };
-        io.emit('user list', users);
+        users[socket.id] = { name: username, online: true };
+        io.emit('user list', users); // Update everyone's list
+    });
+
+    // --- TYPING INDICATOR LOGIC ---
+    socket.on('typing', (isTyping) => {
+        if (users[socket.id]) {
+            socket.broadcast.emit('user typing', { 
+                name: users[socket.id].name, 
+                typing: isTyping 
+            });
+        }
     });
 
     socket.on('chat message', async (data) => {
-        data.senderId = socket.id; // Mark who sent it
-
+        data.senderId = socket.id;
         if (data.target === 'global') {
-            // Save & Broadcast to all
             const savedMsg = new Msg(data);
             await savedMsg.save();
             io.emit('chat message', data);
         } else {
-            // PRIVATE DM: Send only to target and sender
             io.to(data.target).emit('chat message', data);
             socket.emit('chat message', data); 
         }
     });
 
     socket.on('disconnect', () => {
-        delete users[socket.id];
-        io.emit('user list', users);
+        if (users[socket.id]) {
+            io.emit('user list', users); // Update list to show they left
+            delete users[socket.id];
+        }
     });
 });
 
