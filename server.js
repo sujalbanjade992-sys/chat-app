@@ -10,22 +10,23 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-io.on('connection', (socket) => {
-  console.log('A user joined Sujal Networks');
+let userCount = 0;
 
-  // Handle sending messages
+io.on('connection', (socket) => {
+  userCount++;
+  io.emit('user count', userCount); // Tell everyone how many people are online
+
   socket.on('chat message', (msg) => {
     io.emit('chat message', msg);
   });
 
-  // Handle the "is typing..." signal
   socket.on('typing', (data) => {
-    // broadcast sends it to everyone EXCEPT the person typing
     socket.broadcast.emit('display typing', data);
   });
 
   socket.on('disconnect', () => {
-    console.log('A user left Sujal Networks');
+    userCount--;
+    io.emit('user count', userCount); // Update count when someone leaves
   });
 });
 
