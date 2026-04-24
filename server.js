@@ -21,14 +21,11 @@ app.use(express.static(path.join(__dirname)));
 const users = {};
 
 io.on('connection', async (socket) => {
-    // Join the global room by default
     socket.join('global');
 
     socket.on('login', async (username) => {
         users[socket.id] = { name: username };
         io.emit('user list', users);
-        
-        // Send history only on login so it doesn't duplicate
         const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
         socket.emit('load old msgs', history);
     });
@@ -38,7 +35,6 @@ io.on('connection', async (socket) => {
         if (data.target === 'global') {
             socket.to('global').emit('user typing', payload);
         } else {
-            // Only send to the specific person's ID
             socket.to(data.target).emit('user typing', payload);
         }
     });
@@ -47,12 +43,23 @@ io.on('connection', async (socket) => {
         data.senderId = socket.id;
         if (data.target === 'global') {
             const savedMsg = new Msg(data);
-            await savedMsg.save();
+            const result = await savedMsg.save();
+            data._id = result._id; // Real DB ID for unsending
             io.to('global').emit('chat message', data);
         } else {
-            // Private DM: Send to target and sender only
+            data._id = "temp-" + Date.now(); // Temp ID for DMs
             socket.to(data.target).emit('chat message', data);
             socket.emit('chat message', data); 
+        }
+    });
+
+    // --- NEW: UNSEND LOGIC ---
+    socket.on('delete message', async (msgId) => {
+        try {
+            await Msg.findByIdAndDelete(msgId);
+            io.emit('message deleted', msgId);
+        } catch (err) {
+            console.log("Delete error:", err);
         }
     });
 
@@ -63,4 +70,4 @@ io.on('connection', async (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running`));
+http.listen(PORT, () => console.log(`Server live`));
