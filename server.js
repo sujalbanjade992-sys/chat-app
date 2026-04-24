@@ -6,31 +6,33 @@ const path = require('path');
 
 app.use(express.static(path.join(__dirname)));
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
-
-let userCount = 0;
+const users = {}; // Stores { socketId: username }
 
 io.on('connection', (socket) => {
-  userCount++;
-  io.emit('user count', userCount); // Tell everyone how many people are online
+    // When a user logs in
+    socket.on('login', (username) => {
+        users[socket.id] = username;
+        io.emit('user list', users); // Update everyone's sidebar
+        io.emit('user count', Object.keys(users).length);
+    });
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
-  });
+    // Handle Private Message
+    socket.on('private message', (data) => {
+        // data = { toId: "socket_id", text: "hi", from: "Sujal", time: "10:00" }
+        io.to(data.toId).emit('private message', {
+            fromId: socket.id,
+            fromName: users[socket.id],
+            text: data.text,
+            time: data.time
+        });
+    });
 
-  socket.on('typing', (data) => {
-    socket.broadcast.emit('display typing', data);
-  });
-
-  socket.on('disconnect', () => {
-    userCount--;
-    io.emit('user count', userCount); // Update count when someone leaves
-  });
+    socket.on('disconnect', () => {
+        delete users[socket.id];
+        io.emit('user list', users);
+        io.emit('user count', Object.keys(users).length);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+http.listen(PORT, () => console.log(`Server running on ${PORT}`));
