@@ -10,16 +10,16 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         body { background: #0b0b0d; color: white; height: 100vh; overflow: hidden; display: flex; }
 
-        /* Login */
+        /* Login Screen */
         #login-screen { position: fixed; inset: 0; background: #0b0b0d; display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .login-card { background: #151518; padding: 40px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #333; }
 
-        /* Sidebar */
+        /* Sidebar - Responsive */
         #sidebar { width: 280px; background: #121215; border-right: 1px solid #222; display: flex; flex-direction: column; transition: 0.3s ease; }
-        .user-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1a1a1d; }
+        .user-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1a1a1d; font-size: 14px; }
         .user-item:hover { background: #1a1a1d; }
 
-        /* Chat */
+        /* Chat Area */
         #chat-area { flex: 1; display: flex; flex-direction: column; background: #0b0b0d; position: relative; }
         #chat-header { padding: 15px 20px; background: #121215; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
         #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -28,12 +28,12 @@
         .msg-row { display: flex; flex-direction: column; max-width: 80%; margin-bottom: 5px; }
         .sent-row { align-self: flex-end; align-items: flex-end; }
         .received-row { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; }
+        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
         .sent-bubble { background: #007bff; border-bottom-right-radius: 2px; }
         .received-bubble { background: #222; border: 1px solid #333; border-bottom-left-radius: 2px; }
         .dm-bubble { border: 1px solid #00ff88; box-shadow: 0 0 8px rgba(0, 255, 136, 0.2); }
 
-        /* Mobile */
+        /* Mobile Adjustments */
         @media (max-width: 768px) {
             #sidebar { position: absolute; left: 0; transform: translateX(-100%); z-index: 100; height: 100%; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
             #sidebar.open { transform: translateX(0); }
@@ -41,7 +41,7 @@
         }
         #menu-btn { display: none; background: none; border: none; color: #00ff88; font-size: 24px; cursor: pointer; }
         
-        #form { padding: 15px; background: #121215; display: flex; gap: 10px; }
+        #form { padding: 15px; background: #121215; display: flex; gap: 10px; border-top: 1px solid #222; }
         #input { flex: 1; background: #1a1a1d; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
         .send-btn { background: #00ff88; color: black; border: none; padding: 0 20px; border-radius: 25px; font-weight: 800; cursor: pointer; }
     </style>
@@ -50,23 +50,25 @@
 
     <div id="login-screen">
         <div class="login-card">
-            <h1 style="color:#00ff88; margin-bottom:20px;">SUJAL NETWORKS</h1>
+            <h1 style="color:#00ff88; margin-bottom:20px; font-size: 24px;">SUJAL NETWORKS</h1>
             <input type="text" id="username-input" placeholder="Your Name...">
-            <button class="send-btn" style="height:50px; width:100%" onclick="login()">START</button>
+            <button class="send-btn" style="height:50px; width:100%" onclick="login()">ENTER CHAT</button>
         </div>
     </div>
 
     <div id="sidebar">
-        <div style="padding:25px; font-weight:800; color:#555; font-size:11px; letter-spacing:1px;">ACTIVE USERS</div>
+        <div style="padding:25px; font-weight:800; color:#555; font-size:11px; letter-spacing:1px; border-bottom: 1px solid #222;">ACTIVE USERS</div>
         <div id="user-list"></div>
-        <button onclick="setTarget('global')" style="margin-top:auto; background:#1a1a1d; border:none; color:#00ff88; padding:15px; cursor:pointer;">GLOBAL CHAT</button>
+        <button onclick="setTarget('global')" style="margin-top:auto; background:#1a1a1d; border:none; color:#00ff88; padding:20px; cursor:pointer; font-weight: 800;">🌍 GLOBAL CHAT</button>
     </div>
 
     <div id="chat-area">
         <div id="chat-header">
-            <button id="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-            <span id="target-display" style="font-weight:800; color:#00ff88;">Global Room</span>
-            <div id="typing-text" style="font-size:10px; color:#555;"></div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                <span id="target-display" style="font-weight:800; color:#00ff88;">Global Room</span>
+            </div>
+            <div id="typing-text" style="font-size:11px; color:#00ff88; font-style: italic;"></div>
         </div>
         <div id="messages"></div>
         <form id="form" onsubmit="sendMessage(event)">
@@ -87,20 +89,24 @@
             }
         }
 
-        // Typing logic
-        document.getElementById('input').addEventListener('input', () => {
+        // --- TYPING INDICATOR ---
+        const inputField = document.getElementById('input');
+        inputField.addEventListener('input', () => {
             socket.emit('typing', true);
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => socket.emit('typing', false), 2000);
         });
 
         socket.on('user typing', data => {
-            document.getElementById('typing-text').innerText = data.typing ? `${data.name} is typing...` : '';
+            const typeText = document.getElementById('typing-text');
+            typeText.innerText = data.typing ? `${data.name} is typing...` : '';
         });
 
+        // --- ROOM SWITCHING ---
         function setTarget(id, name = "Global Room") {
             targetId = id;
             document.getElementById('target-display').innerText = name;
+            document.getElementById('messages').innerHTML = ''; // Clear for room context
             document.getElementById('sidebar').classList.remove('open');
         }
 
@@ -109,23 +115,27 @@
         });
 
         socket.on('chat message', msg => {
-            if(msg.target === 'global' || msg.target === socket.id || msg.senderId === socket.id) {
+            // STRICT FILTERING TO PREVENT LEAKING
+            const isGlobalMessage = targetId === 'global' && msg.target === 'global';
+            const isDMForMe = targetId === msg.senderId && msg.target === socket.id;
+            const isSentByMeToTarget = msg.senderId === socket.id && msg.target === targetId;
+
+            if (isGlobalMessage || isDMForMe || isSentByMeToTarget) {
                 addMessage(msg);
             }
         });
 
         function sendMessage(e) {
             e.preventDefault();
-            const input = document.getElementById('input');
-            if (!input.value.trim()) return;
+            if (!inputField.value.trim()) return;
             const msg = {
                 senderName: myName,
-                text: input.value,
+                text: inputField.value,
                 target: targetId,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
             socket.emit('chat message', msg);
-            input.value = '';
+            inputField.value = '';
             socket.emit('typing', false);
         }
 
@@ -134,6 +144,7 @@
             const row = document.createElement('div');
             row.className = `msg-row ${isMe ? 'sent-row' : 'received-row'}`;
             const isDM = msg.target !== 'global';
+            
             row.innerHTML = `
                 <div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'} ${isDM ? 'dm-bubble' : ''}">${msg.text}</div>
                 <span style="font-size:9px; opacity:0.3; margin-top:4px;">${msg.senderName} • ${msg.time}</span>
