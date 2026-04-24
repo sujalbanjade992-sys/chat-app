@@ -6,19 +6,21 @@ const path = require('path');
 
 app.use(express.static(path.join(__dirname)));
 
-const users = {}; // Stores { socketId: username }
+const users = {}; 
 
 io.on('connection', (socket) => {
-    // When a user logs in
     socket.on('login', (username) => {
         users[socket.id] = username;
-        io.emit('user list', users); // Update everyone's sidebar
-        io.emit('user count', Object.keys(users).length);
+        io.emit('user list', users); 
     });
 
-    // Handle Private Message
+    // PUBLIC MESSAGE (To Everyone)
+    socket.on('chat message', (msg) => {
+        io.emit('chat message', msg);
+    });
+
+    // PRIVATE MESSAGE (To One Person)
     socket.on('private message', (data) => {
-        // data = { toId: "socket_id", text: "hi", from: "Sujal", time: "10:00" }
         io.to(data.toId).emit('private message', {
             fromId: socket.id,
             fromName: users[socket.id],
@@ -30,7 +32,6 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete users[socket.id];
         io.emit('user list', users);
-        io.emit('user count', Object.keys(users).length);
     });
 });
 
