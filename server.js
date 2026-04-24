@@ -5,45 +5,46 @@ const io = require('socket.io')(http);
 const path = require('path');
 const mongoose = require('mongoose');
 
-// PLUGGING IN YOUR CREDENTIALS FROM SCREENSHOT 24
 const mongoURI = "mongodb+srv://sujalbanjade992_db_user:56oglUhQ9Tjv3SzI@cluster0.whaxbyy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-mongoose.connect(mongoURI)
-    .then(() => console.log("✅ DATABASE CONNECTED"))
-    .catch(err => console.log("❌ DB ERROR:", err));
+mongoose.connect(mongoURI).then(() => console.log("✅ DB Connected"));
 
-const MsgSchema = new mongoose.Schema({
-    user: String,
-    avatar: String,
+// We only save Global messages to keep DMs private/temporary
+const Msg = mongoose.model('Msg', {
+    senderName: String,
     text: String,
-    time: String
+    time: String,
+    target: String
 });
-const Msg = mongoose.model('msg', MsgSchema);
 
 app.use(express.static(path.join(__dirname)));
 
-const users = {}; 
+const users = {};
 
 io.on('connection', async (socket) => {
-    // 1. Load History
-    try {
-        const history = await Msg.find().sort({ _id: 1 }).limit(50);
-        socket.emit('load old msgs', history);
-    } catch (e) { console.log(e); }
+    
+    // Send Global History on connect
+    const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
+    socket.emit('load old msgs', history);
 
     socket.on('login', (username) => {
-        const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`;
-        users[socket.id] = { name: username, avatar: avatar };
-        io.emit('user list', users); 
+        users[socket.id] = { name: username };
+        io.emit('user list', users);
     });
 
-    socket.on('chat message', (data) => {
-        // 2. SHOW ON SCREEN IMMEDIATELY (Fast UI)
-        io.emit('chat message', data);
-        
-        // 3. SAVE TO DB LATER (No waiting)
-        const newMsg = new Msg(data);
-        newMsg.save().catch(err => console.log("Save Error:", err));
+    socket.on('chat message', async (data) => {
+        data.senderId = socket.id; // Mark who sent it
+
+        if (data.target === 'global') {
+            // Save & Broadcast to all
+            const savedMsg = new Msg(data);
+            await savedMsg.save();
+            io.emit('chat message', data);
+        } else {
+            // PRIVATE DM: Send only to target and sender
+            io.to(data.target).emit('chat message', data);
+            socket.emit('chat message', data); 
+        }
     });
 
     socket.on('disconnect', () => {
@@ -53,4 +54,4 @@ io.on('connection', async (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server on ${PORT}`));
+http.listen(PORT, () => console.log(`Server running`));
