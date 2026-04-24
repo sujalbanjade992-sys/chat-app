@@ -1,73 +1,59 @@
-const express = require('express');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const mongoose = require("mongoose");
+const path = require("path");
+
 const app = express();
-const http = require('http').Server(app);
-const io = require('socket.io')(http);
-const path = require('path');
-const mongoose = require('mongoose');
+const server = http.createServer(app);
+const io = new Server(server);
 
-const mongoURI = "mongodb+srv://sujalbanjade992_db_user:56oglUhQ9Tjv3SzI@cluster0.whaxbyy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(mongoURI).then(() => console.log("✅ DB Connected"));
+// --- 1. DATABASE CONNECTION ---
+// Replace this with your actual MongoDB connection string from Atlas
+const mongoURI = "YOUR_MONGODB_ATLAS_CONNECTION_STRING"; 
+mongoose.connect(mongoURI)
+  .then(() => console.log("✅ Commercial Database Connected"))
+  .catch(err => console.error("❌ DB Connection Error:", err));
 
-const Msg = mongoose.model('Msg', {
-    senderName: String,
-    text: String,
-    image: String,
-    type: String,
-    time: String,
-    target: String
+// --- 2. MESSAGE SCHEMA ---
+const MsgSchema = new mongoose.Schema({
+  user: String,
+  text: String,
+  time: { type: Date, default: Date.now }
 });
+const Msg = mongoose.model("Msg", MsgSchema);
 
-app.use(express.static(path.join(__dirname)));
-const users = {};
+app.use(express.static(path.join(__dirname, "public")));
 
-io.on('connection', async (socket) => {
-    socket.join('global');
+io.on("connection", async (socket) => {
+  console.log("A user connected");
 
-    socket.on('login', async (username) => {
-        users[socket.id] = { name: username };
-        io.emit('user list', users);
-        const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
-        socket.emit('load old msgs', history);
-    });
+  // --- 3. SEND HISTORY ---
+  // When a user joins, show them the last 50 messages from the database
+  try {
+    const history = await Msg.find().sort({ _id: 1 }).limit(50);
+    socket.emit("load history", history);
+  } catch (err) {
+    console.log(err);
+  }
 
-    socket.on('typing', (data) => {
-        const payload = { name: users[socket.id]?.name, typing: data.isTyping };
-        if (data.target === 'global') {
-            socket.to('global').emit('user typing', payload);
-        } else {
-            socket.to(data.target).emit('user typing', payload);
-        }
-    });
+  socket.on("chat message", async (msg) => {
+    // Basic Sanitization: Don't allow empty messages
+    if (!msg.text.trim()) return;
 
-    socket.on('chat message', async (data) => {
-        data.senderId = socket.id;
-        if (data.target === 'global') {
-            const savedMsg = new Msg(data);
-            const result = await savedMsg.save();
-            data._id = result._id; // Real DB ID for unsending
-            io.to('global').emit('chat message', data);
-        } else {
-            data._id = "temp-" + Date.now(); // Temp ID for DMs
-            socket.to(data.target).emit('chat message', data);
-            socket.emit('chat message', data); 
-        }
-    });
+    // --- 4. PERSISTENCE ---
+    const newMsg = new Msg(msg);
+    await newMsg.save(); // Save to MongoDB
 
-    // --- NEW: UNSEND LOGIC ---
-    socket.on('delete message', async (msgId) => {
-        try {
-            await Msg.findByIdAndDelete(msgId);
-            io.emit('message deleted', msgId);
-        } catch (err) {
-            console.log("Delete error:", err);
-        }
-    });
+    io.emit("chat message", msg);
+  });
 
-    socket.on('disconnect', () => {
-        delete users[socket.id];
-        io.emit('user list', users);
-    });
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server live`));
+server.listen(PORT, () => {
+  console.log(`🚀 Sujal Networks Live on port ${PORT}`);
+});
