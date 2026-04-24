@@ -79,6 +79,7 @@
     <script>
         const socket = io();
         let myName = "", targetId = "global", typingTimeout;
+        let allMessages = []; 
 
         function login() {
             myName = document.getElementById('username-input').value.trim();
@@ -88,7 +89,6 @@
             }
         }
 
-        // --- TYPING TRIGGER ---
         const inputField = document.getElementById('input');
         inputField.addEventListener('input', () => {
             socket.emit('typing', { isTyping: true, target: targetId });
@@ -103,6 +103,7 @@
         });
 
         function formatText(text) {
+            if(!text) return "";
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" class="chat-link">${url}</a>`);
         }
@@ -124,18 +125,43 @@
         function setTarget(id, name = "Global Room") {
             targetId = id;
             document.getElementById('target-display').innerText = name;
-            document.getElementById('messages').innerHTML = ''; 
             document.getElementById('sidebar').classList.remove('open');
+            renderMessages();
         }
 
-        socket.on('load old msgs', docs => docs.forEach(addMessage));
+        socket.on('load old msgs', docs => {
+            allMessages = docs;
+            renderMessages();
+        });
         
         socket.on('chat message', msg => {
-            const isGlobal = targetId === 'global' && msg.target === 'global';
-            const isDM = (targetId === msg.senderId && msg.target === socket.id) || 
-                         (msg.senderId === socket.id && msg.target === targetId);
-            if (isGlobal || isDM) addMessage(msg);
+            allMessages.push(msg);
+            renderMessages();
         });
+
+        function renderMessages() {
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            
+            const filtered = allMessages.filter(msg => {
+                if (targetId === 'global') return msg.target === 'global';
+                return (msg.target === targetId && msg.senderId === socket.id) || 
+                       (msg.target === socket.id && msg.senderId === targetId) ||
+                       (msg.target === targetId && msg.senderName === myName); // for own sent DMs
+            });
+
+            filtered.forEach(msg => {
+                const isMe = msg.senderName === myName;
+                const row = document.createElement('div');
+                row.className = `msg-row ${isMe ? 'sent-row' : 'received-row'}`;
+                let content = msg.type === 'image' 
+                    ? `<img src="${msg.image}" class="chat-img" onclick="window.open(this.src)">` 
+                    : `<div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'}">${formatText(msg.text)}</div>`;
+                row.innerHTML = `${content}<span style="font-size:9px; opacity:0.3; margin-top:4px;">${msg.senderName} • ${msg.time}</span>`;
+                container.appendChild(row);
+            });
+            container.scrollTo(0, container.scrollHeight);
+        }
 
         function sendMessage(e) {
             e.preventDefault();
@@ -146,18 +172,6 @@
             });
             inputField.value = '';
             socket.emit('typing', { isTyping: false, target: targetId });
-        }
-
-        function addMessage(msg) {
-            const isMe = msg.senderName === myName;
-            const row = document.createElement('div');
-            row.className = `msg-row ${isMe ? 'sent-row' : 'received-row'}`;
-            let content = msg.type === 'image' 
-                ? `<img src="${msg.image}" class="chat-img" onclick="window.open(this.src)">` 
-                : `<div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'}">${formatText(msg.text)}</div>`;
-            row.innerHTML = `${content}<span style="font-size:9px; opacity:0.3; margin-top:4px;">${msg.senderName} • ${msg.time}</span>`;
-            document.getElementById('messages').appendChild(row);
-            document.getElementById('messages').scrollTo(0, document.getElementById('messages').scrollHeight);
         }
 
         socket.on('user list', users => {
@@ -175,3 +189,7 @@
     </script>
 </body>
 </html>
+       
+       
+              
+          
