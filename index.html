@@ -3,27 +3,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sujal's Chat System</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #0f0f0f; color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { background: #0f0f0f; color: white; display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; overflow: hidden; }
         
-        /* Branding Header */
         header { 
             background: #1a1a1a; 
-            padding: 18px; 
+            padding: 15px; 
             text-align: center; 
             border-bottom: 2px solid #00ff88; 
             font-weight: 900; 
             color: #00ff88; 
             text-transform: uppercase;
-            letter-spacing: 3px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Message Container */
         #messages { 
             flex: 1; 
             overflow-y: auto; 
@@ -31,130 +31,91 @@
             display: flex; 
             flex-direction: column; 
             gap: 15px; 
-            background: linear-gradient(to bottom, #0f0f0f, #151515);
+            background: #0f0f0f;
         }
         
-        /* Modern Bubble Design */
         .msg { 
-            max-width: 75%; 
-            padding: 12px 18px; 
-            border-radius: 20px; 
-            line-height: 1.5; 
-            font-size: 16px; 
+            max-width: 80%; 
+            padding: 10px 15px; 
+            border-radius: 18px; 
             position: relative;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: fadeIn 0.3s ease;
         }
 
-        /* Messages from OTHERS */
-        .received { 
-            background: #2b2b2b; 
-            align-self: flex-start; 
-            border-bottom-left-radius: 2px; 
-            border: 1px solid #444;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Messages from YOU */
-        .sent { 
-            background: #007bff; 
-            align-self: flex-end; 
-            border-bottom-right-radius: 2px; 
-            color: white; 
-        }
+        .received { background: #2b2b2b; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .sent { background: #007bff; align-self: flex-end; border-bottom-right-radius: 2px; color: white; }
 
-        /* THE NAME LABEL - High Visibility Fix */
-        .user-label { 
-            font-size: 12px; 
-            font-weight: 800;
-            margin-bottom: 6px; 
-            text-transform: uppercase;
-            display: block;
-            letter-spacing: 1px;
-        }
+        .user-label { font-size: 11px; font-weight: 800; margin-bottom: 3px; text-transform: uppercase; }
+        .received .user-label { color: #00ff88; }
+        .sent .user-label { color: #e0e0e0; }
+
+        /* Timestamp Style */
+        .time { font-size: 9px; align-self: flex-end; margin-top: 4px; opacity: 0.6; }
+
+        #form { background: #1a1a1a; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+        input { flex: 1; background: #333; border: 1px solid #444; padding: 12px 18px; border-radius: 25px; color: white; outline: none; font-size: 16px; }
+        button { background: #00ff88; border: none; padding: 0 20px; border-radius: 25px; font-weight: bold; cursor: pointer; color: #000; }
         
-        /* Different colors for names so they pop */
-        .received .user-label { color: #00ff88; } /* Green for friends */
-        .sent .user-label { color: #e0e0e0; }    /* Light Grey for you */
-
-        /* Input Bar */
-        #form { 
-            background: #1a1a1a; 
-            padding: 20px; 
-            display: flex; 
-            gap: 12px; 
-            border-top: 1px solid #333; 
-        }
-        input { 
-            flex: 1; 
-            background: #333; 
-            border: 1px solid #444; 
-            padding: 14px 20px; 
-            border-radius: 30px; 
-            color: white; 
-            outline: none; 
-            font-size: 16px; 
-        }
-        input:focus { border-color: #00ff88; }
-        
-        button { 
-            background: #00ff88; 
-            border: none; 
-            padding: 0 30px; 
-            border-radius: 30px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            color: #000; 
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-        }
-        button:hover { background: #00cc6e; transform: scale(1.05); }
+        #clear-btn { font-size: 10px; background: transparent; color: #ff4444; border: 1px solid #ff4444; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <header>SUJAL'S CHAT SYSTEM</header>
+    <header>
+        <span>SUJAL NETWORKS</span>
+        <button id="clear-btn" onclick="clearChat()">CLEAR</button>
+    </header>
     <div id="messages"></div>
     <form id="form">
-        <input id="input" autocomplete="off" placeholder="Type your message..." />
+        <input id="input" autocomplete="off" placeholder="Message..." />
         <button>Send</button>
     </form>
 
     <script>
         const socket = io();
+        const messages = document.getElementById('messages');
         const form = document.getElementById('form');
         const input = document.getElementById('input');
-        const messages = document.getElementById('messages');
+        
+        // Notification Sound
+        const notification = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-        // Force a name or default to User
         let myName = prompt("Enter your nickname:") || "User";
-        myName = myName.trim();
+
+        function clearChat() {
+            if(confirm("Clear all messages?")) messages.innerHTML = '';
+        }
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value.trim()) {
-                const data = { user: myName, text: input.value };
-                socket.emit('chat message', data);
+                const now = new Date();
+                const timeStr = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
+                socket.emit('chat message', { user: myName, text: input.value, time: timeStr });
                 input.value = '';
             }
         });
 
         socket.on('chat message', (data) => {
             const item = document.createElement('div');
-            item.classList.add('msg');
+            item.className = `msg ${data.user === myName ? 'sent' : 'received'}`;
             
-            // Check if current user sent it
-            if (data.user === myName) {
-                item.classList.add('sent');
-            } else {
-                item.classList.add('received');
-            }
-
             item.innerHTML = `
                 <span class="user-label">${data.user}</span>
-                <span class="text-content">${data.text}</span>
+                <span>${data.text}</span>
+                <span class="time">${data.time}</span>
             `;
+            
             messages.appendChild(item);
             messages.scrollTo(0, messages.scrollHeight);
+
+            // Play sound if someone else sends a message
+            if (data.user !== myName) {
+                notification.play().catch(e => console.log("Sound blocked until user interacts"));
+            }
         });
     </script>
 </body>
