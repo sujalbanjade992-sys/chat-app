@@ -100,17 +100,23 @@
             }
         }
 
-        // --- Typing Logic ---
-        const inputField = document.getElementById('input');
-        inputField.addEventListener('input', () => {
-            socket.emit('typing', true);
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => socket.emit('typing', false), 2000);
-        });
+     // --- UPDATED TYPING LOGIC ---
+const inputField = document.getElementById('input');
+inputField.addEventListener('input', () => {
+    // Send BOTH the status and the current room/target
+    socket.emit('typing', { isTyping: true, target: targetId });
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        socket.emit('typing', { isTyping: false, target: targetId });
+    }, 2000);
+});
 
-        socket.on('user typing', data => {
-            document.getElementById('typing-text').innerText = data.typing ? `${data.name} is typing...` : '';
-        });
+// This stays the same, but now it only triggers when the server sends it to you
+socket.on('user typing', data => {
+    const typeText = document.getElementById('typing-text');
+    typeText.innerText = data.typing ? `${data.name} is typing...` : '';
+});
 
         // --- Link Detector ---
         function formatText(text) {
