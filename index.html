@@ -5,73 +5,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sujal Networks Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         
         body { 
-            background: radial-gradient(circle at top right, #1e1e2f, #0f0f0f);
+            background: #0f0f12;
+            background-image: radial-gradient(circle at 0% 0%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                              radial-gradient(circle at 100% 100%, rgba(0, 123, 255, 0.05) 0%, transparent 50%);
             color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
         header { 
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px); /* This creates the glass effect */
-            padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            padding: 18px 25px; border-bottom: 1px solid rgba(255,255,255,0.08);
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        .brand-box { display: flex; flex-direction: column; align-items: flex-start; }
-        .brand-name { color: #00ff88; font-weight: 900; letter-spacing: 1px; font-size: 18px; }
-        .user-online-badge { font-size: 10px; color: #aaa; display: flex; align-items: center; gap: 5px; }
-        .dot { height: 8px; width: 8px; background: #00ff88; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #00ff88; }
-
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        
-        /* Glassmorphic Messages */
-        .msg { 
-            max-width: 80%; padding: 12px 16px; border-radius: 20px; 
-            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
-            position: relative; animation: slideIn 0.3s ease-out;
+        .brand-name { 
+            font-family: 'Poppins', sans-serif;
+            color: #00ff88; font-weight: 800; letter-spacing: -0.5px; font-size: 20px; 
         }
 
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .user-online-badge { font-size: 11px; color: #888; margin-top: 2px; font-weight: 600; }
+        .dot { height: 7px; width: 7px; background: #00ff88; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 10px #00ff88; }
 
-        .received { background: rgba(255, 255, 255, 0.08); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .sent { background: rgba(0, 123, 255, 0.4); align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 123, 255, 0.5); }
+        #messages { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Premium Message Architecture */
+        .msg-container { display: flex; flex-direction: column; max-width: 80%; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 8px; }
-        .user-label { font-size: 11px; font-weight: 800; margin-bottom: 4px; color: #00ff88; }
-        .time { font-size: 9px; align-self: flex-end; margin-top: 6px; opacity: 0.5; }
+        .received-container { align-self: flex-start; }
+        .sent-container { align-self: flex-end; align-items: flex-end; }
 
-        #typing { font-size: 11px; color: #00ff88; padding: 5px 25px; height: 20px; font-style: italic; }
+        /* The Name - Now cleaner and outside the bubble */
+        .user-label { 
+            font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); 
+            margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+            margin-left: 12px;
+        }
+        .sent-container .user-label { margin-left: 0; margin-right: 12px; color: #007bff; }
+
+        .msg-bubble { 
+            padding: 14px 20px; border-radius: 22px; 
+            font-size: 15px; font-weight: 400; line-height: 1.5;
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .received-bubble { background: rgba(255, 255, 255, 0.07); border-bottom-left-radius: 4px; color: #eee; }
+        .sent-bubble { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            border-bottom-right-radius: 4px; border: none; color: white;
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2);
+        }
+
+        .time { font-size: 10px; opacity: 0.4; margin-top: 6px; font-weight: 600; }
+
+        #typing { font-size: 12px; color: #00ff88; padding: 0 30px 10px; font-weight: 600; min-height: 22px; }
 
         #form { 
-            background: rgba(26, 26, 26, 0.8); backdrop-filter: blur(20px);
-            padding: 20px; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1);
+            background: rgba(15, 15, 18, 0.95); padding: 20px 25px; 
+            display: flex; gap: 12px; border-top: 1px solid rgba(255,255,255,0.08);
         }
+        
         input { 
             flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-            padding: 14px 20px; border-radius: 30px; color: white; outline: none; transition: 0.3s;
+            padding: 15px 22px; border-radius: 18px; color: white; outline: none; font-size: 15px;
+            transition: all 0.3s;
         }
-        input:focus { border-color: #00ff88; background: rgba(255,255,255,0.1); }
-        button { background: #00ff88; border: none; padding: 0 25px; border-radius: 30px; font-weight: 800; cursor: pointer; color: #000; }
+        input:focus { background: rgba(255,255,255,0.08); border-color: #00ff88; box-shadow: 0 0 15px rgba(0,255,136,0.1); }
+        
+        button { 
+            background: #00ff88; border: none; padding: 0 25px; border-radius: 18px; 
+            font-weight: 800; cursor: pointer; color: #000; text-transform: uppercase; font-size: 13px;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="brand-box">
             <span class="brand-name">SUJAL NETWORKS</span>
-            <div class="user-online-badge"><span class="dot"></span> <span id="count">1</span> Users Online</div>
+            <div class="user-online-badge"><span class="dot"></span> <span id="count">1</span> Active Now</div>
         </div>
-        <button onclick="if(confirm('Clear?'))messages.innerHTML=''" style="background:none; border:none; color:#ff4444; font-weight:bold; cursor:pointer;">CLEAR</button>
+        <button onclick="if(confirm('Wipe chat?'))messages.innerHTML=''" style="background:none; border:none; color:#ff4444; font-size:12px; font-weight:bold;">CLEAR</button>
     </header>
 
     <div id="messages"></div>
     <div id="typing"></div>
 
     <form id="form">
-        <input id="input" autocomplete="off" placeholder="Type a message or paste image link..." />
+        <input id="input" autocomplete="off" placeholder="Type your message..." />
         <button>Send</button>
     </form>
 
@@ -81,9 +107,8 @@
         const typingDiv = document.getElementById('typing');
         const input = document.getElementById('input');
         const countSpan = document.getElementById('count');
-        const myName = prompt("Nickname:") || "Guest";
+        const myName = prompt("What's your name?") || "Guest";
 
-        // Update Online Counter
         socket.on('user count', (num) => { countSpan.innerText = num; });
 
         input.addEventListener('input', () => { socket.emit('typing', { user: myName }); });
@@ -102,12 +127,22 @@
         });
 
         socket.on('chat message', (data) => {
-            const item = document.createElement('div');
-            item.className = `msg ${data.user === myName ? 'sent' : 'received'}`;
+            const container = document.createElement('div');
+            const isMe = data.user === myName;
+            container.className = `msg-container ${isMe ? 'sent-container' : 'received-container'}`;
+            
             const isImage = data.text.match(/\.(jpeg|jpg|gif|png)$/) != null;
-            const content = isImage ? `<img src="${data.text}" class="chat-img" />` : `<span>${data.text}</span>`;
-            item.innerHTML = `<span class="user-label">${data.user}</span>${content}<span class="time">${data.time}</span>`;
-            messages.appendChild(item);
+            const content = isImage ? `<img src="${data.text}" style="max-width:100%; border-radius:12px;" />` : `<span>${data.text}</span>`;
+            
+            container.innerHTML = `
+                <span class="user-label">${data.user}</span>
+                <div class="msg-bubble ${isMe ? 'sent-bubble' : 'received-bubble'}">
+                    ${content}
+                </div>
+                <span class="time">${data.time}</span>
+            `;
+            
+            messages.appendChild(container);
             messages.scrollTo(0, messages.scrollHeight);
         });
     </script>
