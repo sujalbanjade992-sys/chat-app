@@ -7,72 +7,83 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        :root { --accent: #00ff88; --bg: #0b0b0d; --card: #121215; --sent: #007bff; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background: #0b0b0d; color: white; height: 100vh; overflow: hidden; display: flex; }
+        
+        body { background: var(--bg); color: white; height: 100vh; display: flex; overflow: hidden; position: fixed; width: 100%; }
 
-        /* Login Screen */
-        #login-screen { position: fixed; inset: 0; background: #0b0b0d; display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        /* Login */
+        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .login-card { background: #151518; padding: 40px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #333; }
 
-        /* Sidebar - Responsive */
-        #sidebar { width: 280px; background: #121215; border-right: 1px solid #222; display: flex; flex-direction: column; transition: 0.3s ease; }
-        .user-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1a1a1d; font-size: 14px; }
-        .user-item:hover { background: #1a1a1d; }
+        /* Sidebar - Smart Responsive */
+        #sidebar { width: 280px; background: var(--card); border-right: 1px solid #222; display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 100; }
+        
+        /* Chat Main Area */
+        #chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
+        #chat-header { padding: 15px 20px; background: var(--card); border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
 
-        /* Chat Area */
-        #chat-area { flex: 1; display: flex; flex-direction: column; background: #0b0b0d; position: relative; }
-        #chat-header { padding: 15px 20px; background: #121215; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
+        /* Messages */
         #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-
-        /* Message Bubbles */
-        .msg-row { display: flex; flex-direction: column; max-width: 80%; margin-bottom: 5px; }
+        .msg-row { display: flex; flex-direction: column; max-width: 80%; }
         .sent-row { align-self: flex-end; align-items: flex-end; }
         .received-row { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
-        .sent-bubble { background: #007bff; border-bottom-right-radius: 2px; }
+        
+        .bubble { padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+        .sent-bubble { background: var(--sent); border-bottom-right-radius: 2px; }
         .received-bubble { background: #222; border: 1px solid #333; border-bottom-left-radius: 2px; }
-        .dm-bubble { border: 1px solid #00ff88; box-shadow: 0 0 8px rgba(0, 255, 136, 0.2); }
+        .dm-bubble { border: 1px solid var(--accent); }
 
-        /* Mobile Adjustments */
+        /* Multimedia */
+        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; cursor: pointer; border: 1px solid #444; display: block; }
+        .chat-link { color: var(--accent); text-decoration: underline; font-weight: 600; }
+
+        /* Controls */
+        #form { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid #222; align-items: center; }
+        #input { flex: 1; background: #1a1a1d; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
+        .icon-btn { background: #222; border: none; color: var(--accent); font-size: 20px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .send-btn { background: var(--accent); color: black; font-weight: 800; padding: 0 20px; border-radius: 25px; border: none; height: 45px; cursor: pointer; }
+
+        /* Mobile View Logic */
         @media (max-width: 768px) {
-            #sidebar { position: absolute; left: 0; transform: translateX(-100%); z-index: 100; height: 100%; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+            #sidebar { position: absolute; left: 0; transform: translateX(-100%); height: 100%; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
             #sidebar.open { transform: translateX(0); }
             #menu-btn { display: block !important; }
         }
-        #menu-btn { display: none; background: none; border: none; color: #00ff88; font-size: 24px; cursor: pointer; }
-        
-        #form { padding: 15px; background: #121215; display: flex; gap: 10px; border-top: 1px solid #222; }
-        #input { flex: 1; background: #1a1a1d; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
-        .send-btn { background: #00ff88; color: black; border: none; padding: 0 20px; border-radius: 25px; font-weight: 800; cursor: pointer; }
+        #menu-btn { display: none; background: none; border: none; color: var(--accent); font-size: 24px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-card">
-            <h1 style="color:#00ff88; margin-bottom:20px; font-size: 24px;">SUJAL NETWORKS</h1>
-            <input type="text" id="username-input" placeholder="Your Name...">
-            <button class="send-btn" style="height:50px; width:100%" onclick="login()">ENTER CHAT</button>
+            <h1 style="color:var(--accent); margin-bottom:20px; font-size:22px;">SUJAL NETWORKS</h1>
+            <input type="text" id="username-input" placeholder="Your Name..." style="width:100%; padding:15px; background:#222; border:none; border-radius:12px; color:white; margin-bottom:15px;">
+            <button class="send-btn" style="width:100%" onclick="login()">LAUNCH APP</button>
         </div>
     </div>
 
     <div id="sidebar">
-        <div style="padding:25px; font-weight:800; color:#555; font-size:11px; letter-spacing:1px; border-bottom: 1px solid #222;">ACTIVE USERS</div>
+        <div style="padding:25px; font-weight:800; color:#555; font-size:11px; letter-spacing:1px; border-bottom:1px solid #222;">NETWORK USERS</div>
         <div id="user-list"></div>
-        <button onclick="setTarget('global')" style="margin-top:auto; background:#1a1a1d; border:none; color:#00ff88; padding:20px; cursor:pointer; font-weight: 800;">🌍 GLOBAL CHAT</button>
+        <button onclick="setTarget('global')" style="margin-top:auto; background:#1a1a1d; color:var(--accent); padding:20px; border:none; font-weight:800; cursor:pointer;">🌍 GLOBAL LOBBY</button>
     </div>
 
     <div id="chat-area">
         <div id="chat-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <button id="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-                <span id="target-display" style="font-weight:800; color:#00ff88;">Global Room</span>
+                <span id="target-display" style="font-weight:800; color:var(--accent);">Global Room</span>
             </div>
-            <div id="typing-text" style="font-size:11px; color:#00ff88; font-style: italic;"></div>
+            <div id="typing-text" style="font-size:11px; color:var(--accent); font-style:italic;"></div>
         </div>
+        
         <div id="messages"></div>
+
         <form id="form" onsubmit="sendMessage(event)">
-            <input id="input" placeholder="Type a message..." autocomplete="off">
+            <input type="file" id="img-input" accept="image/*" style="display:none;" onchange="handleImage(this)">
+            <button type="button" class="icon-btn" onclick="document.getElementById('img-input').click()">🖼️</button>
+            <input id="input" placeholder="Message or Link..." autocomplete="off">
             <button class="send-btn">SEND</button>
         </form>
     </div>
@@ -89,7 +100,7 @@
             }
         }
 
-        // --- TYPING INDICATOR ---
+        // --- Typing Logic ---
         const inputField = document.getElementById('input');
         inputField.addEventListener('input', () => {
             socket.emit('typing', true);
@@ -98,43 +109,61 @@
         });
 
         socket.on('user typing', data => {
-            const typeText = document.getElementById('typing-text');
-            typeText.innerText = data.typing ? `${data.name} is typing...` : '';
+            document.getElementById('typing-text').innerText = data.typing ? `${data.name} is typing...` : '';
         });
 
-        // --- ROOM SWITCHING ---
+        // --- Link Detector ---
+        function formatText(text) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" class="chat-link">${url}</a>`);
+        }
+
+        // --- Image Handler ---
+        function handleImage(input) {
+            if (input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    socket.emit('chat message', {
+                        senderName: myName,
+                        image: e.target.result,
+                        type: 'image',
+                        target: targetId,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+                };
+                reader.readAsDataURL(input.files[0]);
+                input.value = "";
+            }
+        }
+
         function setTarget(id, name = "Global Room") {
             targetId = id;
             document.getElementById('target-display').innerText = name;
-            document.getElementById('messages').innerHTML = ''; // Clear for room context
+            document.getElementById('messages').innerHTML = ''; 
             document.getElementById('sidebar').classList.remove('open');
         }
 
-        socket.on('load old msgs', docs => {
-            docs.forEach(msg => addMessage(msg));
-        });
-
+        socket.on('load old msgs', docs => docs.forEach(addMessage));
+        
         socket.on('chat message', msg => {
-            // STRICT FILTERING TO PREVENT LEAKING
-            const isGlobalMessage = targetId === 'global' && msg.target === 'global';
-            const isDMForMe = targetId === msg.senderId && msg.target === socket.id;
-            const isSentByMeToTarget = msg.senderId === socket.id && msg.target === targetId;
-
-            if (isGlobalMessage || isDMForMe || isSentByMeToTarget) {
-                addMessage(msg);
-            }
+            // Strict DM Filtering
+            const isGlobal = targetId === 'global' && msg.target === 'global';
+            const isDM = (targetId === msg.senderId && msg.target === socket.id) || 
+                         (msg.senderId === socket.id && msg.target === targetId);
+            
+            if (isGlobal || isDM) addMessage(msg);
         });
 
         function sendMessage(e) {
             e.preventDefault();
             if (!inputField.value.trim()) return;
-            const msg = {
+            socket.emit('chat message', {
                 senderName: myName,
                 text: inputField.value,
+                type: 'text',
                 target: targetId,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            socket.emit('chat message', msg);
+            });
             inputField.value = '';
             socket.emit('typing', false);
         }
@@ -143,10 +172,13 @@
             const isMe = msg.senderName === myName;
             const row = document.createElement('div');
             row.className = `msg-row ${isMe ? 'sent-row' : 'received-row'}`;
-            const isDM = msg.target !== 'global';
             
+            let content = msg.type === 'image' 
+                ? `<img src="${msg.image}" class="chat-img" onclick="window.open(this.src)">` 
+                : `<div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'} ${msg.target !== 'global' ? 'dm-bubble' : ''}">${formatText(msg.text)}</div>`;
+
             row.innerHTML = `
-                <div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'} ${isDM ? 'dm-bubble' : ''}">${msg.text}</div>
+                ${content}
                 <span style="font-size:9px; opacity:0.3; margin-top:4px;">${msg.senderName} • ${msg.time}</span>
             `;
             document.getElementById('messages').appendChild(row);
@@ -159,8 +191,9 @@
             for (let id in users) {
                 if (id === socket.id) continue;
                 const el = document.createElement('div');
-                el.className = 'user-item';
-                el.innerHTML = `<div style="width:8px; height:8px; background:#00ff88; border-radius:50%"></div> ${users[id].name}`;
+                el.style.padding = "15px 20px";
+                el.style.cursor = "pointer";
+                el.innerHTML = `<div style="width:8px; height:8px; background:var(--accent); border-radius:50%; display:inline-block; margin-right:10px;"></div> ${users[id].name}`;
                 el.onclick = () => setTarget(id, users[id].name);
                 list.appendChild(el);
             }
