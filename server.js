@@ -21,20 +21,24 @@ app.use(express.static(path.join(__dirname)));
 const users = {};
 
 io.on('connection', async (socket) => {
-    const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
-    socket.emit('load old msgs', history);
+    // Join the global room by default
+    socket.join('global');
 
-    socket.on('login', (username) => {
+    socket.on('login', async (username) => {
         users[socket.id] = { name: username };
         io.emit('user list', users);
+        
+        // Send history only on login so it doesn't duplicate
+        const history = await Msg.find({ target: 'global' }).sort({ _id: 1 }).limit(50);
+        socket.emit('load old msgs', history);
     });
 
-    // --- FIXED TYPING LOGIC ---
     socket.on('typing', (data) => {
         const payload = { name: users[socket.id]?.name, typing: data.isTyping };
         if (data.target === 'global') {
-            socket.broadcast.emit('user typing', payload);
+            socket.to('global').emit('user typing', payload);
         } else {
+            // Only send to the specific person's ID
             socket.to(data.target).emit('user typing', payload);
         }
     });
@@ -44,9 +48,10 @@ io.on('connection', async (socket) => {
         if (data.target === 'global') {
             const savedMsg = new Msg(data);
             await savedMsg.save();
-            io.emit('chat message', data);
+            io.to('global').emit('chat message', data);
         } else {
-            io.to(data.target).emit('chat message', data);
+            // Private DM: Send to target and sender only
+            socket.to(data.target).emit('chat message', data);
             socket.emit('chat message', data); 
         }
     });
@@ -58,4 +63,4 @@ io.on('connection', async (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running on ${PORT}`));
+http.listen(PORT, () => console.log(`Server running`));
