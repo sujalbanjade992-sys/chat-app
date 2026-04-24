@@ -1,218 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sujal Networks Elite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        :root { --accent: #00ff88; --bg: #0b0b0d; --card: #121215; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg); color: white; height: 100vh; display: flex; overflow: hidden; position: fixed; width: 100%; }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sujal Networks Elite</title>
+  <style>
+    :root { --main: #075e54; --bg: #ece5dd; --me: #dcf8c6; }
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100vh; }
 
-        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .login-card { background: #151518; padding: 40px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #333; }
+    .header { background: var(--main); color: white; padding: 15px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
-        #sidebar { width: 280px; background: var(--card); border-right: 1px solid #222; display: flex; flex-direction: column; transition: 0.3s ease; z-index: 100; }
-        #chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-        #chat-header { padding: 15px 20px; background: var(--card); border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
+    #chat { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
 
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .msg-row { display: flex; flex-direction: column; max-width: 80%; transition: all 0.4s ease; }
-        .sent-row { align-self: flex-end; align-items: flex-end; }
-        .received-row { align-self: flex-start; align-items: flex-start; }
-        
-        .bubble { padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; cursor: pointer; }
-        .sent-bubble { background: #007bff; border-bottom-right-radius: 2px; }
-        .received-bubble { background: #222; border: 1px solid #333; border-bottom-left-radius: 2px; }
-        
-        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; cursor: pointer; border: 1px solid #444; }
-        .chat-link { color: var(--accent); text-decoration: underline; font-weight: 600; }
+    .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .me { background: var(--me); align-self: flex-end; border-top-right-radius: 2px; }
+    .other { background: white; align-self: flex-start; border-top-left-radius: 2px; }
 
-        #form { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid #222; align-items: center; }
-        #input { flex: 1; background: #1a1a1d; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
-        .icon-btn { background: #222; border: none; color: var(--accent); font-size: 20px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .send-btn { background: var(--accent); color: black; font-weight: 800; padding: 0 20px; border-radius: 25px; border: none; height: 45px; cursor: pointer; }
+    .user-name { font-size: 11px; font-weight: bold; display: block; margin-bottom: 4px; color: var(--main); }
 
-        @media (max-width: 768px) {
-            #sidebar { position: absolute; left: 0; transform: translateX(-100%); height: 100%; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
-            #sidebar.open { transform: translateX(0); }
-            #menu-btn { display: block !important; }
-        }
-        #menu-btn { display: none; background: none; border: none; color: var(--accent); font-size: 24px; cursor: pointer; }
-    </style>
+    .form { display: flex; padding: 10px; background: #f0f0f0; border-top: 1px solid #ddd; }
+    input { flex: 1; padding: 12px 20px; border-radius: 25px; border: 1px solid #ccc; outline: none; }
+    button { margin-left: 10px; padding: 0 20px; border: none; background: var(--main); color: white; border-radius: 25px; font-weight: bold; cursor: pointer; }
+  </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <div class="login-card">
-            <h1 style="color:var(--accent); margin-bottom:20px;">SUJAL NETWORKS</h1>
-            <input type="text" id="username-input" placeholder="Your Name...">
-            <button class="send-btn" style="width:100%; margin-top:10px" onclick="login()">LAUNCH</button>
-        </div>
-    </div>
+<div class="header">Sujal Networks Elite</div>
+<div id="chat"></div>
 
-    <div id="sidebar">
-        <div style="padding:25px; font-weight:800; color:#555; font-size:11px;">USERS ONLINE</div>
-        <div id="user-list"></div>
-        <button onclick="setTarget('global')" style="margin-top:auto; background:#1a1a1d; color:var(--accent); padding:20px; border:none; font-weight:800; cursor:pointer;">🌍 GLOBAL LOBBY</button>
-    </div>
+<form class="form" id="chat-form">
+  <input id="input" placeholder="Type a message..." autocomplete="off" />
+  <button type="submit">Send</button>
+</form>
 
-    <div id="chat-area">
-        <div id="chat-header">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <button id="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-                <span id="target-display" style="font-weight:800; color:var(--accent);">Global Room</span>
-            </div>
-            <div id="typing-text" style="font-size:11px; color:var(--accent); font-style:italic;"></div>
-        </div>
-        <div id="messages"></div>
-        <form id="form" onsubmit="sendMessage(event)">
-            <input type="file" id="img-input" accept="image/*" style="display:none;" onchange="handleImage(this)">
-            <button type="button" class="icon-btn" onclick="document.getElementById('img-input').click()">🖼️</button>
-            <input id="input" placeholder="Message..." autocomplete="off">
-            <button class="send-btn">SEND</button>
-        </form>
-    </div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let username = localStorage.getItem("chat-username");
 
-    <script>
-        const socket = io();
-        let myName = "", targetId = "global", typingTimeout;
-        let allMessages = []; 
+  // If no username, ask once and save it in the browser's permanent memory
+  if (!username) {
+    username = prompt("Enter your commercial alias:");
+    localStorage.setItem("chat-username", username);
+  }
 
-        function login() {
-            myName = document.getElementById('username-input').value.trim();
-            if (myName) {
-                socket.emit('login', myName);
-                document.getElementById('login-screen').style.display = 'none';
-            }
-        }
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("input");
 
-        const inputField = document.getElementById('input');
-        inputField.addEventListener('input', () => {
-            socket.emit('typing', { isTyping: true, target: targetId });
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                socket.emit('typing', { isTyping: false, target: targetId });
-            }, 2000);
-        });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input.value) {
+      socket.emit("chat message", {
+        user: username,
+        text: input.value
+      });
+      input.value = "";
+    }
+  });
 
-        socket.on('user typing', data => {
-            document.getElementById('typing-text').innerText = data.typing ? `${data.name} is typing...` : '';
-        });
+  // --- LOAD HISTORY FROM DATABASE ---
+  socket.on("load history", (messages) => {
+    messages.forEach(appendMessage);
+  });
 
-        function formatText(text) {
-            if(!text) return "";
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" class="chat-link">${url}</a>`);
-        }
+  socket.on("chat message", appendMessage);
 
-        function handleImage(input) {
-            if (input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    socket.emit('chat message', {
-                        senderName: myName, image: e.target.result, type: 'image', target: targetId,
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    });
-                };
-                reader.readAsDataURL(input.files[0]);
-                input.value = "";
-            }
-        }
+  function appendMessage(msg) {
+    const div = document.createElement("div");
+    div.classList.add("message");
+    div.classList.add(msg.user === username ? "me" : "other");
 
-        function setTarget(id, name = "Global Room") {
-            targetId = id;
-            document.getElementById('target-display').innerText = name;
-            document.getElementById('sidebar').classList.remove('open');
-            renderMessages();
-        }
-
-        socket.on('load old msgs', docs => {
-            allMessages = docs;
-            renderMessages();
-        });
-        
-        socket.on('chat message', msg => {
-            allMessages.push(msg);
-            renderMessages();
-        });
-
-        function unsendRequest(e, msgId) {
-            e.preventDefault();
-            if (confirm("Unsend this message for everyone?")) {
-                socket.emit('delete message', msgId);
-            }
-        }
-
-        socket.on('message deleted', (msgId) => {
-            const element = document.getElementById(`msg-${msgId}`);
-            if (element) {
-                element.style.transform = "scale(0.8)";
-                element.style.opacity = "0";
-                setTimeout(() => {
-                    element.remove();
-                    allMessages = allMessages.filter(m => m._id !== msgId);
-                }, 400);
-            }
-        });
-
-        function renderMessages() {
-            const container = document.getElementById('messages');
-            container.innerHTML = '';
-            
-            const filtered = allMessages.filter(msg => {
-                if (targetId === 'global') return msg.target === 'global';
-                return (msg.target === targetId && msg.senderId === socket.id) || 
-                       (msg.target === socket.id && msg.senderId === targetId) ||
-                       (msg.target === targetId && msg.senderName === myName);
-            });
-
-            filtered.forEach(msg => {
-                const isMe = msg.senderName === myName;
-                const row = document.createElement('div');
-                row.className = `msg-row ${isMe ? 'sent-row' : 'received-row'}`;
-                row.id = `msg-${msg._id}`;
-                
-                let content = msg.type === 'image' 
-                    ? `<img src="${msg.image}" class="chat-img" onclick="window.open(this.src)">` 
-                    : `<div class="bubble ${isMe ? 'sent-bubble' : 'received-bubble'}">${formatText(msg.text)}</div>`;
-                
-                row.innerHTML = `
-                    <div class="msg-content" ${isMe ? `oncontextmenu="unsendRequest(event, '${msg._id}')"` : ''}>
-                        ${content}
-                    </div>
-                    <span style="font-size:9px; opacity:0.3; margin-top:4px;">${msg.senderName} • ${msg.time}</span>
-                `;
-                container.appendChild(row);
-            });
-            container.scrollTo(0, container.scrollHeight);
-        }
-
-        function sendMessage(e) {
-            e.preventDefault();
-            if (!inputField.value.trim()) return;
-            socket.emit('chat message', {
-                senderName: myName, text: inputField.value, type: 'text', target: targetId,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-            inputField.value = '';
-            socket.emit('typing', { isTyping: false, target: targetId });
-        }
-
-        socket.on('user list', users => {
-            const list = document.getElementById('user-list');
-            list.innerHTML = '';
-            for (let id in users) {
-                if (id === socket.id) continue;
-                const el = document.createElement('div');
-                el.style.padding = "15px 20px"; el.style.cursor = "pointer";
-                el.innerHTML = `<div style="width:8px; height:8px; background:var(--accent); border-radius:50%; display:inline-block; margin-right:10px;"></div> ${users[id].name}`;
-                el.onclick = () => setTarget(id, users[id].name);
-                list.appendChild(el);
-            }
-        });
-    </script>
+    div.innerHTML = `<span class="user-name">${msg.user}</span>${msg.text}`;
+    
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+</script>
 </body>
 </html>
