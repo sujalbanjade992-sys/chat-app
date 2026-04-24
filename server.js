@@ -43,16 +43,24 @@ io.on('connection', async (socket) => {
         io.emit('user list', users);
     });
 
-    // 3. Typing Indicator
-    socket.on('typing', (isTyping) => {
-        if (users[socket.id]) {
-            socket.broadcast.emit('user typing', { 
-                name: users[socket.id].name, 
-                typing: isTyping 
-            });
-        }
-    });
+    // --- TYPING INDICATOR: TARGETED ---
+socket.on('typing', (data) => {
+    // data now contains { isTyping: true/false, target: 'global' or id }
+    if (users[socket.id]) {
+        const typingData = { 
+            name: users[socket.id].name, 
+            typing: data.isTyping 
+        };
 
+        if (data.target === 'global') {
+            // Tell everyone EXCEPT the sender in global
+            socket.broadcast.emit('user typing', typingData);
+        } else {
+            // Tell ONLY the specific person you are DMing
+            socket.to(data.target).emit('user typing', typingData);
+        }
+    }
+});
     // 4. Handling Messages (Text, Links, and Photos)
     socket.on('chat message', async (data) => {
         data.senderId = socket.id;
