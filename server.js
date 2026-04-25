@@ -11,12 +11,9 @@ let globalMessages = [];
 
 io.on('connection', (socket) => {
     socket.on('login', (name) => {
-        // Store both name and ID so we can route DMs
         users[socket.id] = { name: name, id: socket.id };
         socket.join('global');
         socket.emit('load history', globalMessages);
-        
-        // Send everyone the updated list of users (including their IDs)
         io.emit('update user list', Object.values(users));
     });
 
@@ -24,8 +21,9 @@ io.on('connection', (socket) => {
         const msgData = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             name: users[socket.id]?.name || 'User',
+            senderId: socket.id, // This allows the receiver to save the DM to the right folder
             text: data.text,
-            target: data.target // This is either 'global' or a specific socket.id
+            target: data.target 
         };
 
         if (data.target === 'global') {
@@ -33,7 +31,7 @@ io.on('connection', (socket) => {
             if (globalMessages.length > 50) globalMessages.shift();
             io.to('global').emit('chat message', msgData);
         } else {
-            // PRIVATE DM: Send only to the target ID and back to the sender
+            // Private DM: Send to target and back to sender
             io.to(data.target).emit('chat message', msgData);
             socket.emit('chat message', msgData);
         }
@@ -45,11 +43,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('typing', (data) => {
-        if (data.target === 'global') {
-            socket.to('global').emit('display typing', { name: users[socket.id]?.name, isTyping: data.isTyping, fromRoom: 'global' });
-        } else {
-            socket.to(data.target).emit('display typing', { name: users[socket.id]?.name, isTyping: data.isTyping, fromRoom: socket.id });
-        }
+        const room = data.target === 'global' ? 'global' : data.target;
+        socket.to(room).emit('display typing', { 
+            name: users[socket.id]?.name, 
+            isTyping: data.isTyping, 
+            fromRoom: data.target === 'global' ? 'global' : socket.id 
+        });
     });
 
     socket.on('disconnect', () => {
@@ -59,4 +58,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Server live on ${PORT}`));
+server.listen(PORT, () => console.log(`Sujal Networks Live on ${PORT}`));
