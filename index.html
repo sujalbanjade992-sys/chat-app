@@ -4,55 +4,81 @@
     <title>Sujal Networks Elite</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #0b0e11; color: white; font-family: sans-serif; display: flex; height: 100vh; margin: 0; }
-        #sidebar { width: 250px; background: #15191c; padding: 20px; border-right: 1px solid #333; }
-        #main-chat { flex: 1; display: flex; flexDirection: column; padding: 20px; position: relative; }
-        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
+        body { background: #0b0e11; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; margin: 0; overflow: hidden; }
+        #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
+        #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; position: relative; }
         
-        .message { max-width: 70%; padding: 10px 15px; border-radius: 15px; position: relative; }
-        .my-message { align-self: flex-end; background: #007bff; color: white; }
-        .other-message { align-self: flex-start; background: #2c2f33; }
+        /* Chat Header */
+        #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        #chat-title { margin: 0; color: #00ff88; font-size: 1.2rem; }
+        #typing-status { font-size: 0.85rem; color: #00ff88; font-style: italic; min-height: 20px; }
+
+        /* Messages Area */
+        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 20px; padding-bottom: 100px; }
+        .message { max-width: 70%; padding: 12px 16px; border-radius: 18px; position: relative; word-wrap: break-word; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .my-message { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
+        .other-message { align-self: flex-start; background: #23272a; border-bottom-left-radius: 2px; border: 1px solid #333; }
         
-        .message-info { font-size: 0.7em; margin-bottom: 5px; opacity: 0.8; }
-        .delete-btn { position: absolute; top: 2px; right: 5px; background: none; border: none; color: white; cursor: pointer; opacity: 0.5; }
-        .delete-btn:hover { opacity: 1; color: #ff4d4d; }
-        
-        #input-area { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #23272a; color: white; }
-        button#send-btn { padding: 10px 20px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
-        #typing-status { font-size: 0.8em; color: #00ff88; height: 20px; }
+        .message-info { font-size: 0.7rem; margin-bottom: 4px; font-weight: bold; opacity: 0.7; text-transform: uppercase; }
+        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: none; }
+        .my-message:hover .delete-btn { display: block; }
+
+        /* Input Area */
+        #input-area { padding: 20px; background: #15191c; display: flex; gap: 10px; border-top: 1px solid #333; }
+        input { flex: 1; padding: 14px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; font-size: 1rem; }
+        input:focus { border: 1px solid #00ff88; }
+        button#send-btn { padding: 10px 25px; border-radius: 25px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button#send-btn:hover { transform: scale(1.05); background: #00cc6e; }
+
+        .channel-item { padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.2s; margin-bottom: 5px; }
+        .channel-item:hover { background: #23272a; }
     </style>
 </head>
 <body>
     <div id="sidebar">
+        <h2 style="color: #00ff88;">SHOSHO</h2>
+        <p style="font-size: 0.8rem; opacity: 0.5;">Secure V2.1</p>
+        <hr style="width: 100%; border: 0.5px solid #333; margin: 20px 0;">
         <h3>Channels</h3>
-        <div onclick="changeRoom('global', 'Global Network')" style="cursor:pointer; color:#00ff88;">● Global Network</div>
-        <hr>
-        <h3>Direct Messages</h3>
+        <div class="channel-item" onclick="changeRoom('global', 'Global Network')">🌐 Global Network</div>
+        <hr style="width: 100%; border: 0.5px solid #333; margin: 20px 0;">
+        <h3>Users Online</h3>
         <div id="user-list"></div>
     </div>
 
     <div id="main-chat">
-        <h2 id="chat-title">Global Network</h2>
-        <div id="typing-status"></div>
+        <div id="header">
+            <h2 id="chat-title">Global Network</h2>
+            <div id="typing-status"></div>
+        </div>
+        
         <div id="chat-box"></div>
         
         <div id="input-area">
-            <input type="text" id="msg-input" placeholder="Type a message..." oninput="handleTyping()">
+            <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
             <button id="send-btn" onclick="sendMessage()">SEND</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let myName = prompt("Enter your name:") || "Guest";
+        let myName = prompt("Enter your name to join Sujal Networks:") || "Guest";
         let target = 'global';
+        
         socket.emit('login', myName);
+
+        // HANDLE ENTER KEY
+        document.getElementById('msg-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
 
         function sendMessage() {
             const input = document.getElementById('msg-input');
-            if (input.value.trim()) {
-                socket.emit('chat message', { text: input.value, target: target });
+            const text = input.value.trim();
+            if (text) {
+                socket.emit('chat message', { text: text, target: target });
                 input.value = '';
                 socket.emit('typing', { target: target, isTyping: false });
             }
@@ -66,7 +92,7 @@
             div.id = `msg-${data.id}`;
             div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
             div.innerHTML = `
-                <div class="message-info">${data.name}</div>
+                <div class="message-info">${isMe ? 'You' : data.name}</div>
                 <div>${data.text}</div>
                 ${isMe ? `<button class="delete-btn" onclick="deleteMsg('${data.id}')">×</button>` : ''}
             `;
@@ -74,16 +100,32 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
-        function deleteMsg(id) { socket.emit('delete message', { msgId: id }); }
+        function deleteMsg(id) {
+            socket.emit('delete message', { msgId: id });
+        }
         
         socket.on('message deleted', (id) => {
             const el = document.getElementById(`msg-${id}`);
-            if (el) el.remove();
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.8)';
+                setTimeout(() => el.remove(), 300);
+            }
         });
 
         socket.on('load history', (history) => {
-            document.getElementById('chat-box').innerHTML = '';
-            history.forEach(msg => socket.emit('chat message internal', msg)); 
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+            history.forEach(data => {
+                // Re-using the message logic for history
+                const isMe = data.name === myName;
+                const div = document.createElement('div');
+                div.id = `msg-${data.id}`;
+                div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
+                div.innerHTML = `<div class="message-info">${isMe ? 'You' : data.name}</div><div>${data.text}</div>`;
+                chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
         });
 
         function handleTyping() {
@@ -91,7 +133,7 @@
             clearTimeout(window.typingTimer);
             window.typingTimer = setTimeout(() => {
                 socket.emit('typing', { target: target, isTyping: false });
-            }, 2000);
+            }, 1500);
         }
 
         socket.on('display typing', (data) => {
@@ -104,8 +146,14 @@
         function changeRoom(newTarget, name) {
             target = newTarget;
             document.getElementById('chat-title').innerText = name;
-            document.getElementById('chat-box').innerHTML = '';
+            document.getElementById('chat-box').innerHTML = '<p style="text-align:center; opacity:0.5;">Loading messages...</p>';
+            if(newTarget === 'global') socket.emit('login', myName); 
         }
+
+        socket.on('update user list', (list) => {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = list.map(name => `<div class="channel-item">👤 ${name}</div>`).join('');
+        });
     </script>
 </body>
 </html>
