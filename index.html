@@ -8,43 +8,40 @@
         #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
         #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; position: relative; }
         
-        /* Chat Header */
         #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        #chat-title { margin: 0; color: #00ff88; font-size: 1.2rem; }
+        #chat-title { margin: 0; color: #00ff88; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
         #typing-status { font-size: 0.85rem; color: #00ff88; font-style: italic; min-height: 20px; }
 
-        /* Messages Area */
         #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 20px; padding-bottom: 100px; }
-        .message { max-width: 70%; padding: 12px 16px; border-radius: 18px; position: relative; word-wrap: break-word; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message { max-width: 70%; padding: 12px 16px; border-radius: 18px; position: relative; word-wrap: break-word; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .my-message { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
         .other-message { align-self: flex-start; background: #23272a; border-bottom-left-radius: 2px; border: 1px solid #333; }
         
-        .message-info { font-size: 0.7rem; margin-bottom: 4px; font-weight: bold; opacity: 0.7; text-transform: uppercase; }
-        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: none; }
+        .message-info { font-size: 0.7rem; margin-bottom: 4px; font-weight: bold; opacity: 0.7; }
+        .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 10px; display: none; line-height: 18px; text-align: center; }
         .my-message:hover .delete-btn { display: block; }
 
-        /* Input Area */
         #input-area { padding: 20px; background: #15191c; display: flex; gap: 10px; border-top: 1px solid #333; }
         input { flex: 1; padding: 14px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; font-size: 1rem; }
-        input:focus { border: 1px solid #00ff88; }
-        button#send-btn { padding: 10px 25px; border-radius: 25px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button#send-btn:hover { transform: scale(1.05); background: #00cc6e; }
+        button#send-btn { padding: 10px 25px; border-radius: 25px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
 
-        .channel-item { padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.2s; margin-bottom: 5px; }
-        .channel-item:hover { background: #23272a; }
+        .list-item { padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.9rem; }
+        .active-room { background: rgba(0, 255, 136, 0.1); color: #00ff88; border-left: 3px solid #00ff88; }
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <h2 style="color: #00ff88;">SHOSHO</h2>
-        <p style="font-size: 0.8rem; opacity: 0.5;">Secure V2.1</p>
+        <h2 style="color: #00ff88; margin-bottom: 5px;">SUJAL NETWORKS</h2>
+        <p style="font-size: 0.7rem; opacity: 0.5; margin-top: 0;">ELITE CHAT TERMINAL V2.1</p>
         <hr style="width: 100%; border: 0.5px solid #333; margin: 20px 0;">
-        <h3>Channels</h3>
-        <div class="channel-item" onclick="changeRoom('global', 'Global Network')">🌐 Global Network</div>
+        
+        <h4 style="opacity: 0.6; margin-bottom: 10px;">CHANNELS</h4>
+        <div class="list-item active-room" onclick="changeRoom('global', 'Global Network')" style="cursor:pointer;">🌐 Global Network</div>
+        
         <hr style="width: 100%; border: 0.5px solid #333; margin: 20px 0;">
-        <h3>Users Online</h3>
+        <h4 style="opacity: 0.6; margin-bottom: 10px;">ACTIVE USERS</h4>
         <div id="user-list"></div>
     </div>
 
@@ -57,19 +54,18 @@
         <div id="chat-box"></div>
         
         <div id="input-area">
-            <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
+            <input type="text" id="msg-input" placeholder="Secure message..." oninput="handleTyping()">
             <button id="send-btn" onclick="sendMessage()">SEND</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let myName = prompt("Enter your name to join Sujal Networks:") || "Guest";
+        let myName = prompt("Identify yourself:") || "User_" + Math.floor(Math.random()*1000);
         let target = 'global';
         
         socket.emit('login', myName);
 
-        // HANDLE ENTER KEY
         document.getElementById('msg-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
@@ -87,29 +83,25 @@
         socket.on('chat message', (data) => {
             const chatBox = document.getElementById('chat-box');
             const isMe = data.name === myName;
-            
             const div = document.createElement('div');
             div.id = `msg-${data.id}`;
             div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
             div.innerHTML = `
-                <div class="message-info">${isMe ? 'You' : data.name}</div>
+                <div class="message-info">${isMe ? 'YOU' : data.name}</div>
                 <div>${data.text}</div>
-                ${isMe ? `<button class="delete-btn" onclick="deleteMsg('${data.id}')">×</button>` : ''}
+                ${isMe ? `<button class="delete-btn" onclick="deleteMsg('${data.id}')">✕</button>` : ''}
             `;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
-        function deleteMsg(id) {
-            socket.emit('delete message', { msgId: id });
-        }
+        function deleteMsg(id) { socket.emit('delete message', { msgId: id }); }
         
         socket.on('message deleted', (id) => {
             const el = document.getElementById(`msg-${id}`);
             if (el) {
                 el.style.opacity = '0';
-                el.style.transform = 'scale(0.8)';
-                setTimeout(() => el.remove(), 300);
+                setTimeout(() => el.remove(), 200);
             }
         });
 
@@ -117,12 +109,11 @@
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML = '';
             history.forEach(data => {
-                // Re-using the message logic for history
                 const isMe = data.name === myName;
                 const div = document.createElement('div');
                 div.id = `msg-${data.id}`;
                 div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
-                div.innerHTML = `<div class="message-info">${isMe ? 'You' : data.name}</div><div>${data.text}</div>`;
+                div.innerHTML = `<div class="message-info">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>`;
                 chatBox.appendChild(div);
             });
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -143,17 +134,17 @@
             }
         });
 
+        socket.on('update user list', (list) => {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = list.map(name => `<div class="list-item">👤 ${name}</div>`).join('');
+        });
+
         function changeRoom(newTarget, name) {
             target = newTarget;
             document.getElementById('chat-title').innerText = name;
-            document.getElementById('chat-box').innerHTML = '<p style="text-align:center; opacity:0.5;">Loading messages...</p>';
+            document.getElementById('chat-box').innerHTML = '';
             if(newTarget === 'global') socket.emit('login', myName); 
         }
-
-        socket.on('update user list', (list) => {
-            const userList = document.getElementById('user-list');
-            userList.innerHTML = list.map(name => `<div class="channel-item">👤 ${name}</div>`).join('');
-        });
     </script>
 </body>
 </html>
