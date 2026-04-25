@@ -74,3 +74,8 @@ io.on('connection', (socket) => {
 
     // ... (rest of disconnect logic)
 });
+// ADD THIS TO SERVER.JS
+    socket.on('delete message', (data) => {
+        // Tell everyone to remove the message with this ID
+        io.emit('message deleted', data.msgId);
+    });
