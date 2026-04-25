@@ -6,11 +6,11 @@
     <title>Sujal Networks Elite</title>
     <style>
         :root { --accent: #00ff88; --bg: #050505; --card: #121215; --me: #248bf5; }
-        body { margin: 0; background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; height: 100vh; }
+        body { margin: 0; background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
         /* SIDEBAR */
-        #sidebar { width: 280px; background: var(--card); border-right: 1px solid #222; display: flex; flex-direction: column; transition: 0.3s; }
-        .user-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #1a1a1a; display: flex; align-items: center; gap: 10px; }
+        #sidebar { width: 280px; background: var(--card); border-right: 1px solid #222; display: flex; flex-direction: column; }
+        .user-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #1a1a1a; display: flex; align-items: center; gap: 10px; font-size: 14px; }
         .user-item:hover { background: #1c1c1e; }
         .online-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
 
@@ -25,42 +25,42 @@
         .me { background: var(--me); align-self: flex-end; border-bottom-right-radius: 4px; }
         .other { background: #262629; align-self: flex-start; border-bottom-left-radius: 4px; }
         .msg-info { font-size: 10px; opacity: 0.4; margin-top: 4px; display: block; }
-        .img-msg { max-width: 100%; border-radius: 10px; margin-top: 5px; }
 
-        /* INPUT */
+        /* INPUT AREA */
         #typing-box { height: 20px; padding-left: 25px; color: var(--accent); font-size: 12px; font-style: italic; }
         .input-area { padding: 20px; display: flex; gap: 10px; background: var(--card); }
         input { flex: 1; background: #1c1c1e; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
-        .btn { background: var(--accent); border: none; padding: 10px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; color: black; }
+        .btn { background: var(--accent); border: none; padding: 10px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; color: black; }
 
-        /* BRANDING OVERLAY */
+        /* BRANDING SPLASH SCREEN */
         #brand-guard { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="brand-guard">
-    <h1 style="color:var(--accent); font-size: 3rem; letter-spacing: -2px;">SUJAL NETWORKS</h1>
-    <p style="opacity: 0.5;">ELITE ACCESS PROTOCOL</p>
-    <input type="text" id="name-input" placeholder="Identity..." style="margin-top: 20px; width: 250px;">
-    <button class="btn" onclick="startApp()" style="margin-top: 15px; width: 250px;">INITIALIZE</button>
+    <h1 style="color:var(--accent); font-size: 3rem; letter-spacing: -2px; margin:0;">SUJAL NETWORKS</h1>
+    <p style="opacity: 0.5; letter-spacing: 2px;">ELITE ACCESS PROTOCOL</p>
+    <input type="text" id="name-input" placeholder="Your Identity..." style="margin-top: 20px; width: 220px; text-align:center;">
+    <button class="btn" onclick="startApp()" style="margin-top: 15px; width: 220px;">INITIALIZE</button>
 </div>
 
 <div id="sidebar">
-    <div style="padding: 25px; font-weight: 900; letter-spacing: 1px;">ACTIVE CHATS</div>
+    <div style="padding: 25px; font-weight: 900; letter-spacing: 1px; color:#555;">CHANNELS</div>
     <div class="user-item" onclick="setRoom('global', 'Global Network')">🌍 Global Network</div>
+    <div style="padding: 15px 25px; font-weight: 900; font-size: 11px; color:#555;">DIRECT MESSAGES</div>
     <div id="online-list"></div>
 </div>
 
 <div id="main-chat">
     <div class="header">
         <span id="chat-title">Global Network</span>
-        <span style="font-size: 10px; opacity: 0.5;">ENCRYPTED</span>
+        <span style="font-size: 10px; opacity: 0.5;">SECURE V2</span>
     </div>
     <div id="messages"></div>
     <div id="typing-box"></div>
     <form class="input-area" onsubmit="sendMsg(event)">
-        <input id="m-input" placeholder="Message or Image Link..." oninput="isTyping()">
+        <input id="m-input" placeholder="Enter message..." oninput="isTyping()">
         <button class="btn">SEND</button>
     </form>
 </div>
@@ -70,18 +70,28 @@
     const socket = io();
     let myName = "";
     let target = 'global';
+    let myMessages = { 'global': [] }; // MEMORY CACHE
 
     function startApp() {
-        myName = document.getElementById('name-input').value;
-        if(!myName) return;
-        document.getElementById('brand-guard').style.display = 'none';
+        const input = document.getElementById('name-input');
+        myName = input.value.trim();
+        if(!myName) return alert("Enter a name, bro!");
+        document.getElementById('brand-guard').style.transition = "0.5s";
+        document.getElementById('brand-guard').style.opacity = "0";
+        setTimeout(() => document.getElementById('brand-guard').style.display = 'none', 500);
         socket.emit('login', myName);
     }
 
     function setRoom(id, name) {
         target = id;
         document.getElementById('chat-title').innerText = name;
-        document.getElementById('messages').innerHTML = '';
+        const chatDisplay = document.getElementById('messages');
+        chatDisplay.innerHTML = '';
+        
+        // Load messages from memory for THIS specific room
+        if(myMessages[id]) {
+            myMessages[id].forEach(m => renderMessage(m));
+        }
     }
 
     function isTyping() {
@@ -100,22 +110,33 @@
     }
 
     socket.on('chat message', (msg) => {
+        // Decide which "memory folder" this message goes into
+        let chatKey = (msg.target === 'global') ? 'global' : (msg.senderId === socket.id ? msg.target : msg.senderId);
+        
+        if(!myMessages[chatKey]) myMessages[chatKey] = [];
+        myMessages[chatKey].push(msg);
+
+        // Only show if we are looking at that room right now
+        if (target === chatKey) renderMessage(msg);
+    });
+
+    function renderMessage(msg) {
         const div = document.createElement('div');
         const isMe = msg.user === myName;
         div.className = `bubble ${isMe ? 'me' : 'other'}`;
         
         let content = `<b>${msg.user}</b><br>`;
         if(msg.isImg && msg.text.startsWith('http')) {
-            content += `<img src="${msg.text}" class="img-msg" onerror="this.src='https://via.placeholder.com/150?text=Invalid+Link'">`;
+            content += `<img src="${msg.text}" style="max-width:100%; border-radius:10px; margin-top:5px;">`;
         } else {
             content += msg.text;
         }
-        content += `<span class="msg-info">${msg.time}</span>`;
+        content += `<span class="msg-info">${msg.time || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
         
         div.innerHTML = content;
         document.getElementById('messages').appendChild(div);
         document.getElementById('messages').scrollTo(0, document.getElementById('messages').scrollHeight);
-    });
+    }
 
     socket.on('user list', (users) => {
         const list = document.getElementById('online-list');
@@ -131,7 +152,10 @@
     });
 
     socket.on('display typing', (data) => {
-        document.getElementById('typing-box').innerText = data.isTyping ? `${data.name} is typing...` : '';
+        const statusBox = document.getElementById('typing-box');
+        if (target === 'global' || data.name === document.getElementById('chat-title').innerText) {
+            statusBox.innerText = data.isTyping ? `${data.name} is typing...` : '';
+        }
     });
 </script>
 </body>
