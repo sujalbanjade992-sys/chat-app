@@ -20,7 +20,7 @@ io.on('connection', (socket) => {
 
     socket.on('chat message', (data) => {
         const msgData = {
-            id: Date.now().toString(),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             name: users[socket.id]?.name || 'User',
             text: data.text,
             target: data.target
@@ -28,17 +28,15 @@ io.on('connection', (socket) => {
 
         if (data.target === 'global') {
             globalMessages.push(msgData);
-            if (globalMessages.length > 100) globalMessages.shift();
+            if (globalMessages.length > 50) globalMessages.shift();
             io.to('global').emit('chat message', msgData);
         } else {
-            // Send to target and sender
             socket.to(data.target).emit('chat message', msgData);
             socket.emit('chat message', msgData);
         }
     });
 
     socket.on('delete message', (data) => {
-        // Remove from global history if it exists there
         globalMessages = globalMessages.filter(m => m.id !== data.msgId);
         io.emit('message deleted', data.msgId);
     });
