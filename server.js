@@ -42,3 +42,35 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log(`🚀 Sujal Networks Elite Live on ${PORT}`));
+// ... (keep your existing setup at the top)
+
+io.on('connection', (socket) => {
+    socket.on('login', (name) => {
+        users[socket.id] = { name: name };
+        io.emit('user list', users);
+        socket.join('global'); // Everyone is in global by default
+    });
+
+    socket.on('chat message', (data) => {
+        const payload = { ...data, senderId: socket.id, time: new Date().toLocaleTimeString() };
+        
+        if (data.target === 'global') {
+            io.to('global').emit('chat message', payload);
+        } else {
+            // PRIVATE DM: Only send to the target person AND back to yourself
+            io.to(data.target).emit('chat message', payload);
+            socket.emit('chat message', payload); 
+        }
+    });
+
+    socket.on('typing', (data) => {
+        // Only show typing to the specific person or the global room
+        socket.to(data.target).emit('display typing', { 
+            name: users[socket.id]?.name, 
+            isTyping: data.isTyping,
+            target: data.target // Tell the frontend WHICH room is typing
+        });
+    });
+
+    // ... (rest of disconnect logic)
+});
