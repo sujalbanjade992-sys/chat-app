@@ -8,31 +8,24 @@
         :root { --accent: #00ff88; --bg: #050505; --card: #121215; --me: #248bf5; }
         body { margin: 0; background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
-        /* SIDEBAR */
         #sidebar { width: 280px; background: var(--card); border-right: 1px solid #222; display: flex; flex-direction: column; }
         .user-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #1a1a1a; display: flex; align-items: center; gap: 10px; font-size: 14px; }
         .user-item:hover { background: #1c1c1e; }
         .online-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
 
-        /* CHAT AREA */
         #main-chat { flex: 1; display: flex; flex-direction: column; position: relative; }
         .header { padding: 15px 25px; background: rgba(10,10,10,0.8); backdrop-filter: blur(15px); border-bottom: 1px solid #222; font-weight: 800; color: var(--accent); display: flex; justify-content: space-between; }
         
         #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .bubble { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; animation: slideUp 0.2s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .me { background: var(--me); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bubble { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; transition: 0.3s; cursor: default; }
+        .me { background: var(--me); align-self: flex-end; border-bottom-right-radius: 4px; cursor: context-menu; }
         .other { background: #262629; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 10px; opacity: 0.4; margin-top: 4px; display: block; }
-
-        /* INPUT AREA */
+        
         #typing-box { height: 20px; padding-left: 25px; color: var(--accent); font-size: 12px; font-style: italic; }
         .input-area { padding: 20px; display: flex; gap: 10px; background: var(--card); }
         input { flex: 1; background: #1c1c1e; border: 1px solid #333; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
         .btn { background: var(--accent); border: none; padding: 10px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; color: black; }
 
-        /* BRANDING SPLASH SCREEN */
         #brand-guard { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     </style>
 </head>
@@ -55,7 +48,7 @@
 <div id="main-chat">
     <div class="header">
         <span id="chat-title">Global Network</span>
-        <span style="font-size: 10px; opacity: 0.5;">SECURE V2</span>
+        <span style="font-size: 10px; opacity: 0.5;">SECURE V2.1</span>
     </div>
     <div id="messages"></div>
     <div id="typing-box"></div>
@@ -70,12 +63,12 @@
     const socket = io();
     let myName = "";
     let target = 'global';
-    let myMessages = { 'global': [] }; // MEMORY CACHE
+    let myMessages = { 'global': [] }; 
 
     function startApp() {
         const input = document.getElementById('name-input');
         myName = input.value.trim();
-        if(!myName) return alert("Enter a name, bro!");
+        if(!myName) return alert("Identity required!");
         document.getElementById('brand-guard').style.transition = "0.5s";
         document.getElementById('brand-guard').style.opacity = "0";
         setTimeout(() => document.getElementById('brand-guard').style.display = 'none', 500);
@@ -87,8 +80,6 @@
         document.getElementById('chat-title').innerText = name;
         const chatDisplay = document.getElementById('messages');
         chatDisplay.innerHTML = '';
-        
-        // Load messages from memory for THIS specific room
         if(myMessages[id]) {
             myMessages[id].forEach(m => renderMessage(m));
         }
@@ -105,25 +96,45 @@
         const val = document.getElementById('m-input').value;
         if(!val) return;
         const isImg = val.match(/\.(jpeg|jpg|gif|png|webp)$/) != null || val.startsWith('http');
-        socket.emit('chat message', { user: myName, text: val, target: target, isImg: isImg });
+        
+        // We do NOT render locally here. We wait for the server to send it back.
+        socket.emit('chat message', { 
+            user: myName, 
+            text: val, 
+            target: target, 
+            isImg: isImg,
+            msgId: 'id-' + Date.now() + Math.random()
+        });
         document.getElementById('m-input').value = '';
     }
 
     socket.on('chat message', (msg) => {
-        // Decide which "memory folder" this message goes into
         let chatKey = (msg.target === 'global') ? 'global' : (msg.senderId === socket.id ? msg.target : msg.senderId);
         
         if(!myMessages[chatKey]) myMessages[chatKey] = [];
-        myMessages[chatKey].push(msg);
-
-        // Only show if we are looking at that room right now
-        if (target === chatKey) renderMessage(msg);
+        
+        // Prevent adding the same message twice to memory
+        if(!myMessages[chatKey].find(m => m.msgId === msg.msgId)) {
+            myMessages[chatKey].push(msg);
+            if (target === chatKey) renderMessage(msg);
+        }
     });
 
     function renderMessage(msg) {
         const div = document.createElement('div');
         const isMe = msg.user === myName;
         div.className = `bubble ${isMe ? 'me' : 'other'}`;
+        div.id = msg.msgId;
+        
+        // UNSEND LOGIC (Right-click or Long Press)
+        if(isMe) {
+            div.oncontextmenu = (e) => {
+                e.preventDefault();
+                if(confirm("Unsend for everyone?")) {
+                    socket.emit('delete message', { msgId: msg.msgId });
+                }
+            };
+        }
         
         let content = `<b>${msg.user}</b><br>`;
         if(msg.isImg && msg.text.startsWith('http')) {
@@ -131,12 +142,23 @@
         } else {
             content += msg.text;
         }
-        content += `<span class="msg-info">${msg.time || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+        content += `<span style="font-size:10px; opacity:0.4; display:block; margin-top:4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
         
         div.innerHTML = content;
         document.getElementById('messages').appendChild(div);
         document.getElementById('messages').scrollTo(0, document.getElementById('messages').scrollHeight);
     }
+
+    socket.on('message deleted', (msgId) => {
+        // Remove from UI
+        const el = document.getElementById(msgId);
+        if(el) el.remove();
+        
+        // Remove from memory cache so it doesn't reappear
+        for (let key in myMessages) {
+            myMessages[key] = myMessages[key].filter(m => m.msgId !== msgId);
+        }
+    });
 
     socket.on('user list', (users) => {
         const list = document.getElementById('online-list');
