@@ -1,32 +1,37 @@
 
 const express = require('express');
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
 const path = require('path');
 
-// Branding Logs for Render Dashboard
-console.log("-----------------------------------------");
-console.log("   SUJAL NETWORKS ELITE - INITIALIZING   ");
-console.log("-----------------------------------------");
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(express.static(__dirname));
-
-const users = {};
+let users = {};
 
 io.on('connection', (socket) => {
+    // 1. Handle Login
     socket.on('login', (name) => {
-        users[socket.id] = name;
-        io.emit('user list', users);
-        console.log(`${name} joined Sujal Networks`);
+        users[socket.id] = { name: name, id: socket.id };
+        io.emit('user list', users); 
+        socket.join('global');
+        console.log(`✅ ${name} connected to Sujal Networks`);
     });
 
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', { ...msg, id: Date.now() });
+    // 2. Handle Messages (DMs and Global)
+    socket.on('chat message', (data) => {
+        const payload = { ...data, senderId: socket.id, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+        if(data.target === 'global') {
+            io.to('global').emit('chat message', payload);
+        } else {
+            io.to(data.target).emit('chat message', payload);
+            socket.emit('chat message', payload); // Send back to self for DMs
+        }
     });
 
+    // 3. Typing Indicator
     socket.on('typing', (data) => {
-        socket.broadcast.emit('display typing', data);
+        socket.to(data.target).emit('display typing', { name: users[socket.id]?.name, isTyping: data.isTyping });
     });
 
     socket.on('disconnect', () => {
@@ -36,6 +41,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`✅ Sujal Networks Elite Live on Port ${PORT}`);
-});
+http.listen(PORT, () => console.log(`🚀 Sujal Networks Elite Live on ${PORT}`));
