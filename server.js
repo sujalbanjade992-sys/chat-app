@@ -21,7 +21,7 @@ io.on('connection', (socket) => {
         const msgData = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             name: users[socket.id]?.name || 'User',
-            senderId: socket.id, // This allows the receiver to save the DM to the right folder
+            senderId: socket.id,
             text: data.text,
             target: data.target 
         };
@@ -31,15 +31,9 @@ io.on('connection', (socket) => {
             if (globalMessages.length > 50) globalMessages.shift();
             io.to('global').emit('chat message', msgData);
         } else {
-            // Private DM: Send to target and back to sender
             io.to(data.target).emit('chat message', msgData);
             socket.emit('chat message', msgData);
         }
-    });
-
-    socket.on('delete message', (data) => {
-        globalMessages = globalMessages.filter(m => m.id !== data.msgId);
-        io.emit('message deleted', data.msgId);
     });
 
     socket.on('typing', (data) => {
