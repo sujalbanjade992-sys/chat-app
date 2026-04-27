@@ -7,29 +7,22 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #0b0e11; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
-        
-        /* Auth Screen */
         #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .auth-card { background: #15191c; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 350px; text-align: center; }
         .auth-input { width: 100%; padding: 12px; margin: 10px 0; background: #23272a; border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box; }
         .auth-btn { width: 100%; padding: 12px; background: #00ff88; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        
-        /* Chat Layout */
         #chat-container { display: none; height: 100vh; width: 100vw; flex-direction: row; }
         #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
         #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; }
         #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
         #chat-title { margin: 0; color: #00ff88; font-size: 1.1rem; text-transform: uppercase; }
         #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
-        
         .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; position: relative; word-wrap: break-word; }
         .my-message { align-self: flex-end; background: #007bff; border-bottom-right-radius: 2px; }
         .other-message { align-self: flex-start; background: #23272a; border: 1px solid #333; border-bottom-left-radius: 2px; }
-        
         #input-area { padding: 20px; display: flex; gap: 10px; background: #15191c; border-top: 1px solid #333; }
         input#msg-input { flex: 1; padding: 12px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; }
-        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; transition: 0.2s; }
-        .user-item:hover { background: #2c2f33; }
+        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; }
         .active-room { background: #2c2f33; color: #00ff88; border-left: 3px solid #00ff88; }
     </style>
 </head>
@@ -55,7 +48,7 @@
             <hr style="width:100%; border:0.5px solid #333;">
             <h4 style="opacity:0.6;">DIRECT MESSAGES</h4>
             <div id="user-list"></div>
-            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; padding:8px; border-radius:8px; cursor:pointer; font-weight:bold;">Logout</button>
+            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; padding:8px; border-radius:8px; cursor:pointer;">Logout</button>
         </div>
         <div id="main-chat">
             <div id="header">
@@ -64,14 +57,13 @@
             </div>
             <div id="chat-box"></div>
             <div id="input-area">
-                <input type="text" id="msg-input" placeholder="Secure message..." oninput="handleTyping()">
+                <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
                 <button onclick="sendMessage()" style="background:#00ff88; border:none; padding:10px 25px; border-radius:25px; font-weight:bold; cursor:pointer;">SEND</button>
             </div>
         </div>
     </div>
 
     <script>
-        // YOUR UNIQUE CONFIG FROM SCREENSHOT 46
         const firebaseConfig = {
             apiKey: "AIzaSyDazJG_ThTZKb7SpyDDJ1IGMQQeaH7XupQ",
             authDomain: "sujal-networks.firebaseapp.com",
@@ -90,25 +82,16 @@
         let target = 'global';
         let chatMemory = { 'global': [] };
 
-        // LOGIN / SIGNUP
         async function handleAuth(type) {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const errorEl = document.getElementById('auth-error');
-            errorEl.innerText = "Processing...";
-            
             try {
-                if (type === 'signup') {
-                    await auth.createUserWithEmailAndPassword(email, password);
-                } else {
-                    await auth.signInWithEmailAndPassword(email, password);
-                }
-            } catch (error) {
-                errorEl.innerText = error.message;
-            }
+                if (type === 'signup') { await auth.createUserWithEmailAndPassword(email, password); } 
+                else { await auth.signInWithEmailAndPassword(email, password); }
+            } catch (error) { errorEl.innerText = error.message; }
         }
 
-        // AUTH STATE OBSERVER
         auth.onAuthStateChanged((user) => {
             if (user) {
                 myName = user.email.split('@')[0]; 
@@ -123,7 +106,6 @@
 
         function logout() { auth.signOut().then(() => location.reload()); }
 
-        // CHAT LOGIC
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
         function sendMessage() {
@@ -147,8 +129,7 @@
             const isMe = data.name === myName;
             const div = document.createElement('div');
             div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
-            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7; font-weight:bold; margin-bottom:3px;">${isMe ? 'YOU' : data.name}</div>
-                             <div>${data.text}</div>`;
+            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7; font-weight:bold;">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>`;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -161,10 +142,6 @@
         });
 
         function changeRoom(id, name) {
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-room'));
-            const activeEl = document.getElementById(`room-${id}`);
-            if(activeEl) activeEl.classList.add('active-room');
-
             target = id;
             document.getElementById('chat-title').innerText = target === 'global' ? name : "DM: " + name;
             document.getElementById('chat-box').innerHTML = '';
