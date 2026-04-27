@@ -8,24 +8,28 @@
     <style>
         body { background: #0b0e11; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
         
-        /* Login Screen Styles */
+        /* Auth Screen */
         #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .auth-card { background: #15191c; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 350px; text-align: center; }
         .auth-input { width: 100%; padding: 12px; margin: 10px 0; background: #23272a; border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box; }
         .auth-btn { width: 100%; padding: 12px; background: #00ff88; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* Chat Styles (Hidden until login) */
+        /* Chat Layout */
         #chat-container { display: none; height: 100vh; width: 100vw; flex-direction: row; }
         #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
         #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; }
         #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+        #chat-title { margin: 0; color: #00ff88; font-size: 1.1rem; text-transform: uppercase; }
         #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+        
         .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; position: relative; word-wrap: break-word; }
         .my-message { align-self: flex-end; background: #007bff; border-bottom-right-radius: 2px; }
         .other-message { align-self: flex-start; background: #23272a; border: 1px solid #333; border-bottom-left-radius: 2px; }
-        #input-area { padding: 20px; display: flex; gap: 10px; background: #15191c; }
+        
+        #input-area { padding: 20px; display: flex; gap: 10px; background: #15191c; border-top: 1px solid #333; }
         input#msg-input { flex: 1; padding: 12px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; }
-        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; }
+        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; transition: 0.2s; }
+        .user-item:hover { background: #2c2f33; }
         .active-room { background: #2c2f33; color: #00ff88; border-left: 3px solid #00ff88; }
     </style>
 </head>
@@ -34,9 +38,9 @@
     <div id="auth-overlay">
         <div class="auth-card">
             <h2 style="color: #00ff88; margin:0;">SUJAL NETWORKS</h2>
-            <p style="opacity: 0.6; font-size: 0.8rem; margin-bottom:20px;">AUTHENTICATION REQUIRED</p>
+            <p style="opacity: 0.6; font-size: 0.8rem; margin-bottom:20px;">ELITE ACCESS ONLY</p>
             <input type="email" id="auth-email" class="auth-input" placeholder="Email">
-            <input type="password" id="auth-password" class="auth-input" placeholder="Password">
+            <input type="password" id="auth-password" class="auth-input" placeholder="Password (min 6 chars)">
             <button class="auth-btn" onclick="handleAuth('login')">LOGIN</button>
             <button class="auth-btn" style="background:transparent; color:#00ff88; border:1px solid #00ff88;" onclick="handleAuth('signup')">CREATE ACCOUNT</button>
             <p id="auth-error" style="color:#ff4d4d; font-size:0.8rem; margin-top:10px;"></p>
@@ -51,7 +55,7 @@
             <hr style="width:100%; border:0.5px solid #333;">
             <h4 style="opacity:0.6;">DIRECT MESSAGES</h4>
             <div id="user-list"></div>
-            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; padding:5px; border-radius:5px; cursor:pointer;">Logout</button>
+            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; padding:8px; border-radius:8px; cursor:pointer; font-weight:bold;">Logout</button>
         </div>
         <div id="main-chat">
             <div id="header">
@@ -60,30 +64,38 @@
             </div>
             <div id="chat-box"></div>
             <div id="input-area">
-                <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
-                <button onclick="sendMessage()" style="background:#00ff88; border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">SEND</button>
+                <input type="text" id="msg-input" placeholder="Secure message..." oninput="handleTyping()">
+                <button onclick="sendMessage()" style="background:#00ff88; border:none; padding:10px 25px; border-radius:25px; font-weight:bold; cursor:pointer;">SEND</button>
             </div>
         </div>
     </div>
 
     <script>
-        // PASTE YOUR FIREBASE CONFIG HERE
+        // YOUR UNIQUE CONFIG FROM SCREENSHOT 46
         const firebaseConfig = {
-            // REPLACE THIS ENTIRE BLOCK WITH THE ONE FROM FIREBASE CONSOLE
+            apiKey: "AIzaSyDazJG_ThTZKb7SpyDDJ1IGMQQeaH7XupQ",
+            authDomain: "sujal-networks.firebaseapp.com",
+            projectId: "sujal-networks",
+            storageBucket: "sujal-networks.firebasestorage.app",
+            messagingSenderId: "835586269526",
+            appId: "1:835586269526:web:c76ee92b9951499e8176f7",
+            measurementId: "G-9M8631HMKX"
         };
         
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const socket = io();
+        
         let myName = "";
         let target = 'global';
         let chatMemory = { 'global': [] };
 
-        // AUTHENTICATION LOGIC
+        // LOGIN / SIGNUP
         async function handleAuth(type) {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const errorEl = document.getElementById('auth-error');
+            errorEl.innerText = "Processing...";
             
             try {
                 if (type === 'signup') {
@@ -96,10 +108,10 @@
             }
         }
 
-        // AUTO-LOGIN CHECK
+        // AUTH STATE OBSERVER
         auth.onAuthStateChanged((user) => {
             if (user) {
-                myName = user.email.split('@')[0]; // Use first part of email as name
+                myName = user.email.split('@')[0]; 
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('chat-container').style.display = 'flex';
                 socket.emit('login', myName);
@@ -109,9 +121,9 @@
             }
         });
 
-        function logout() { auth.signOut(); location.reload(); }
+        function logout() { auth.signOut().then(() => location.reload()); }
 
-        // --- THE REST OF YOUR CHAT LOGIC (Same as before) ---
+        // CHAT LOGIC
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
         function sendMessage() {
@@ -134,9 +146,9 @@
             const chatBox = document.getElementById('chat-box');
             const isMe = data.name === myName;
             const div = document.createElement('div');
-            div.id = `msg-${data.id}`;
             div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
-            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7;">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>`;
+            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7; font-weight:bold; margin-bottom:3px;">${isMe ? 'YOU' : data.name}</div>
+                             <div>${data.text}</div>`;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -149,6 +161,10 @@
         });
 
         function changeRoom(id, name) {
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-room'));
+            const activeEl = document.getElementById(`room-${id}`);
+            if(activeEl) activeEl.classList.add('active-room');
+
             target = id;
             document.getElementById('chat-title').innerText = target === 'global' ? name : "DM: " + name;
             document.getElementById('chat-box').innerHTML = '';
