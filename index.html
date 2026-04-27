@@ -2,58 +2,116 @@
 <html>
 <head>
     <title>Sujal Networks Elite</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #0b0e11; color: white; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; margin: 0; overflow: hidden; }
+        body { background: #0b0e11; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
+        
+        /* Login Screen Styles */
+        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .auth-card { background: #15191c; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 350px; text-align: center; }
+        .auth-input { width: 100%; padding: 12px; margin: 10px 0; background: #23272a; border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box; }
+        .auth-btn { width: 100%; padding: 12px; background: #00ff88; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* Chat Styles (Hidden until login) */
+        #chat-container { display: none; height: 100vh; width: 100vw; flex-direction: row; }
         #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
         #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; }
         #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
-        #chat-title { margin: 0; color: #00ff88; font-size: 1.1rem; text-transform: uppercase; }
         #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
-        .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; position: relative; }
+        .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; position: relative; word-wrap: break-word; }
         .my-message { align-self: flex-end; background: #007bff; border-bottom-right-radius: 2px; }
         .other-message { align-self: flex-start; background: #23272a; border: 1px solid #333; border-bottom-left-radius: 2px; }
-        .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d4d; border: none; border-radius: 50%; cursor: pointer; color: white; width: 18px; height: 18px; font-size: 10px; display: none; }
-        .my-message:hover .delete-btn { display: block; }
         #input-area { padding: 20px; display: flex; gap: 10px; background: #15191c; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #23272a; color: white; outline: none; }
-        button { padding: 10px 20px; border-radius: 20px; border: none; background: #00ff88; font-weight: bold; cursor: pointer; }
-        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; transition: 0.2s; border-left: 3px solid transparent; }
-        .user-item:hover { background: #2c2f33; }
-        .active-room { background: #2c2f33; border-left: 3px solid #00ff88; color: #00ff88; }
+        input#msg-input { flex: 1; padding: 12px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; }
+        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; }
+        .active-room { background: #2c2f33; color: #00ff88; border-left: 3px solid #00ff88; }
     </style>
 </head>
 <body>
-    <div id="sidebar">
-        <h2 style="color: #00ff88; margin-bottom:0;">SUJAL NETWORKS</h2>
-        <p style="font-size:0.7rem; opacity:0.5; margin-bottom:20px;">SECURE V2.5</p>
-        <div id="room-global" class="user-item active-room" onclick="changeRoom('global', 'Global Network')">🌐 Global Network</div>
-        <hr style="width:100%; border:0.5px solid #333;">
-        <h4 style="opacity:0.6;">DIRECT MESSAGES</h4>
-        <div id="user-list"></div>
-    </div>
-    <div id="main-chat">
-        <div id="header">
-            <h2 id="chat-title">Global Network</h2>
-            <div id="typing-status" style="color:#00ff88; font-size:0.8rem;"></div>
+
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h2 style="color: #00ff88; margin:0;">SUJAL NETWORKS</h2>
+            <p style="opacity: 0.6; font-size: 0.8rem; margin-bottom:20px;">AUTHENTICATION REQUIRED</p>
+            <input type="email" id="auth-email" class="auth-input" placeholder="Email">
+            <input type="password" id="auth-password" class="auth-input" placeholder="Password">
+            <button class="auth-btn" onclick="handleAuth('login')">LOGIN</button>
+            <button class="auth-btn" style="background:transparent; color:#00ff88; border:1px solid #00ff88;" onclick="handleAuth('signup')">CREATE ACCOUNT</button>
+            <p id="auth-error" style="color:#ff4d4d; font-size:0.8rem; margin-top:10px;"></p>
         </div>
-        <div id="chat-box"></div>
-        <div id="input-area">
-            <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
-            <button onclick="sendMessage()">SEND</button>
+    </div>
+
+    <div id="chat-container">
+        <div id="sidebar">
+            <h2 style="color: #00ff88; margin:0;">SUJAL NETWORKS</h2>
+            <p style="font-size:0.7rem; opacity:0.5; margin-bottom:20px;">SECURE V3.0</p>
+            <div id="room-global" class="user-item active-room" onclick="changeRoom('global', 'Global Network')">🌐 Global Network</div>
+            <hr style="width:100%; border:0.5px solid #333;">
+            <h4 style="opacity:0.6;">DIRECT MESSAGES</h4>
+            <div id="user-list"></div>
+            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; padding:5px; border-radius:5px; cursor:pointer;">Logout</button>
+        </div>
+        <div id="main-chat">
+            <div id="header">
+                <h2 id="chat-title">Global Network</h2>
+                <div id="typing-status" style="color:#00ff88; font-size:0.8rem;"></div>
+            </div>
+            <div id="chat-box"></div>
+            <div id="input-area">
+                <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
+                <button onclick="sendMessage()" style="background:#00ff88; border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">SEND</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const socket = io();
-        let myName = prompt("Enter Name:") || "User" + Math.floor(Math.random()*100);
-        let target = 'global';
+        // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {
+            // REPLACE THIS ENTIRE BLOCK WITH THE ONE FROM FIREBASE CONSOLE
+        };
         
-        // THIS IS THE SECRET SAUCE: It saves your chats locally
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const socket = io();
+        let myName = "";
+        let target = 'global';
         let chatMemory = { 'global': [] };
 
-        socket.emit('login', myName);
+        // AUTHENTICATION LOGIC
+        async function handleAuth(type) {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorEl = document.getElementById('auth-error');
+            
+            try {
+                if (type === 'signup') {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                } else {
+                    await auth.signInWithEmailAndPassword(email, password);
+                }
+            } catch (error) {
+                errorEl.innerText = error.message;
+            }
+        }
 
+        // AUTO-LOGIN CHECK
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                myName = user.email.split('@')[0]; // Use first part of email as name
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+                socket.emit('login', myName);
+            } else {
+                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('chat-container').style.display = 'none';
+            }
+        });
+
+        function logout() { auth.signOut(); location.reload(); }
+
+        // --- THE REST OF YOUR CHAT LOGIC (Same as before) ---
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
         function sendMessage() {
@@ -66,18 +124,10 @@
         }
 
         socket.on('chat message', (data) => {
-            // Determine which room this message belongs to
-            // If it's a DM sent TO me, the "room" is the sender's ID.
-            // If it's a DM sent BY me, the "room" is the target ID.
-            let roomKey = data.target === 'global' ? 'global' : (data.name === myName ? data.target : data.senderId);
-            
+            let roomKey = data.target === 'global' ? 'global' : (data.senderId === socket.id ? data.target : data.senderId);
             if (!chatMemory[roomKey]) chatMemory[roomKey] = [];
             chatMemory[roomKey].push(data);
-
-            // Only render if we are currently looking at that room
-            if (roomKey === target) {
-                renderMessage(data);
-            }
+            if (roomKey === target) renderMessage(data);
         });
 
         function renderMessage(data) {
@@ -86,46 +136,23 @@
             const div = document.createElement('div');
             div.id = `msg-${data.id}`;
             div.className = `message ${isMe ? 'my-message' : 'other-message'}`;
-            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7;">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>
-                ${isMe ? `<button class="delete-btn" onclick="deleteMsg('${data.id}')">✕</button>` : ''}`;
+            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7;">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>`;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function deleteMsg(id) { socket.emit('delete message', { msgId: id }); }
-        
-        socket.on('message deleted', (id) => { 
-            const el = document.getElementById(`msg-${id}`); 
-            if(el) el.remove(); 
-            // Also remove from memory
-            for (let room in chatMemory) {
-                chatMemory[room] = chatMemory[room].filter(m => m.id !== id);
-            }
-        });
-
         socket.on('update user list', (users) => {
-            const listHTML = users
+            document.getElementById('user-list').innerHTML = users
                 .filter(u => u.name !== myName)
                 .map(u => `<div id="room-${u.id}" class="user-item ${target === u.id ? 'active-room' : ''}" onclick="changeRoom('${u.id}', '${u.name}')">👤 ${u.name}</div>`)
                 .join('');
-            document.getElementById('user-list').innerHTML = listHTML;
         });
 
         function changeRoom(id, name) {
-            // Update UI Active State
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-room'));
-            const activeEl = document.getElementById(`room-${id}`);
-            if(activeEl) activeEl.classList.add('active-room');
-
             target = id;
             document.getElementById('chat-title').innerText = target === 'global' ? name : "DM: " + name;
-            
-            // RELOAD history from memory
-            const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = '';
-            if (chatMemory[target]) {
-                chatMemory[target].forEach(msg => renderMessage(msg));
-            }
+            document.getElementById('chat-box').innerHTML = '';
+            if (chatMemory[target]) chatMemory[target].forEach(msg => renderMessage(msg));
         }
 
         socket.on('load history', (history) => {
@@ -143,7 +170,7 @@
         }
 
         socket.on('display typing', (data) => {
-            if(data.fromRoom === target || (target === 'global' && data.fromRoom === 'global')) {
+            if(data.fromRoom === target) {
                 document.getElementById('typing-status').innerText = data.isTyping ? data.name + " is typing..." : "";
             }
         });
