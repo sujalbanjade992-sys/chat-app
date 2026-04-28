@@ -3,36 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sujal Networks</title>
+    <title>Sujal's Network</title>
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #121212; color: white; margin: 0; }
-        #login-container { background: #1e1e1e; padding: 2rem; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        input { padding: 10px; width: 80%; margin-bottom: 1rem; border-radius: 4px; border: none; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        #main-content { display: none; text-align: center; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0f0f0f; 
+            color: white; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+        }
+
+        /* Entry Screen */
+        #entry-screen { 
+            background: #1a1a1a; 
+            padding: 40px; 
+            border-radius: 12px; 
+            text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            width: 350px;
+        }
+        
+        h1 { color: #00d2ff; margin-bottom: 20px; font-size: 24px; }
+        
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border-radius: 6px; 
+            border: 1px solid #333; 
+            background: #252525; 
+            color: white; 
+            font-size: 16px;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 16px;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        /* Main Application (Hidden initially) */
+        #main-app { 
+            display: none; 
+            text-align: center; 
+            width: 90%; 
+            max-width: 800px;
+        }
+
+        .card { 
+            background: #1a1a1a; 
+            padding: 30px; 
+            border-radius: 12px; 
+            border-left: 5px solid #00d2ff;
+        }
     </style>
 </head>
 <body>
 
-    <div id="login-container">
-        <h2>Welcome to Shosho</h2>
-        <p>Just enter your name to start</p>
-        <input type="text" id="userName" placeholder="Your Name">
-        <br>
-        <button onclick="enterApp()">Enter Project</button>
+    <div id="entry-screen">
+        <h1>Sujal's Network</h1>
+        <p>Enter your name to join</p>
+        <input type="text" id="userNameInput" placeholder="Type your name...">
+        <button onclick="joinNetwork()">Enter Network</button>
     </div>
 
-    <div id="main-content">
-        <h1>Welcome, <span id="display-name"></span>!</h1>
-        <p>The login system is gone. Everything is working now.</p>
+    <div id="main-app">
+        <div class="card">
+            <h2>Welcome to the Network, <span id="userDisplayName"></span>!</h2>
+            <hr style="border: 0.5px solid #333; margin: 20px 0;">
+            <p>The login system has been removed. You are now connected to the database.</p>
+            <p style="color: #888;">Current Project Status: Active</p>
+            <button onclick="location.reload()" style="width: auto; padding: 10px 20px; margin-top: 20px; background: #333;">Sign Out / Exit</button>
+        </div>
     </div>
 
     <script>
-        // Your specific config
+        // YOUR FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDazJG_ThTZKb75pyODj1IGMQQeaH7XupQ",
             authDomain: "sujal-networks.firebaseapp.com",
@@ -46,30 +108,29 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function enterApp() {
-            const name = document.getElementById('userName').value;
+        async function joinNetwork() {
+            const name = document.getElementById('userNameInput').value;
 
-            if (name.trim() === "") {
-                alert("Please enter a name!");
+            if (!name) {
+                alert("Please enter a name first!");
                 return;
             }
 
             try {
-                // Just save the name to your database
+                // 1. Save to Firestore (The 'visitors' folder)
                 await db.collection("visitors").add({
                     name: name,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Hide login, show content
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('display-name').innerText = name;
-                document.getElementById('main-content').style.display = 'block';
-                
-                console.log("Success! No Auth needed.");
-            } catch (error) {
-                console.error("Error: ", error);
-                alert("Check your Firebase Rules! Make sure they are set to 'allow read, write: if true;'");
+                // 2. Hide the entry screen and show the app
+                document.getElementById('entry-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                document.getElementById('userDisplayName').innerText = name;
+
+            } catch (e) {
+                console.error("Error connecting: ", e);
+                alert("Database Error! Make sure you clicked 'Publish' on your Firestore Rules.");
             }
         }
     </script>
