@@ -10,91 +10,49 @@
 
     <style>
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #0f0f0f; 
-            color: white; 
-            margin: 0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-        }
-
-        /* Entry Screen */
-        #entry-screen { 
-            background: #1a1a1a; 
-            padding: 40px; 
-            border-radius: 12px; 
-            text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            width: 350px;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         
-        h1 { color: #00d2ff; margin-bottom: 20px; font-size: 24px; }
+        /* Login Screen */
+        #entry-screen { background: #161616; padding: 40px; border-radius: 15px; text-align: center; width: 350px; box-shadow: 0 0 20px rgba(0, 210, 255, 0.2); }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #222; color: white; }
+        .btn-main { width: 100%; padding: 12px; background: #00d2ff; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
-        input { 
-            width: 100%; 
-            padding: 12px; 
-            margin-bottom: 20px; 
-            border-radius: 6px; 
-            border: 1px solid #333; 
-            background: #252525; 
-            color: white; 
-            font-size: 16px;
-        }
-
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: linear-gradient(45deg, #00d2ff, #3a7bd5); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            font-size: 16px;
-        }
-
-        button:hover { opacity: 0.9; }
-
-        /* Main Application (Hidden initially) */
-        #main-app { 
-            display: none; 
-            text-align: center; 
-            width: 90%; 
-            max-width: 800px;
-        }
-
-        .card { 
-            background: #1a1a1a; 
-            padding: 30px; 
-            border-radius: 12px; 
-            border-left: 5px solid #00d2ff;
-        }
+        /* Chat Interface */
+        #main-app { display: none; width: 95%; max-width: 600px; height: 80vh; background: #161616; border-radius: 15px; flex-direction: column; overflow: hidden; border: 1px solid #333; }
+        #chat-header { padding: 20px; background: #222; border-bottom: 1px solid #333; text-align: center; }
+        #messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #0f0f0f; }
+        .msg { background: #252525; padding: 10px 15px; border-radius: 10px; max-width: 80%; width: fit-content; }
+        .msg b { color: #00d2ff; display: block; font-size: 12px; margin-bottom: 4px; }
+        #input-area { padding: 20px; display: flex; gap: 10px; background: #161616; }
+        #msgInput { margin-bottom: 0; }
+        .send-btn { width: 80px; background: #00d2ff; color: black; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="entry-screen">
-        <h1>Sujal's Network</h1>
-        <p>Enter your name to join</p>
-        <input type="text" id="userNameInput" placeholder="Type your name...">
-        <button onclick="joinNetwork()">Enter Network</button>
+        <h1 style="color: #00d2ff; margin-top: 0;">Sujal's Network</h1>
+        <p style="color: #888;">Enter your name to start chatting</p>
+        <input type="text" id="userNameInput" placeholder="Your Name...">
+        <button class="btn-main" onclick="joinApp()">JOIN CHAT</button>
     </div>
 
     <div id="main-app">
-        <div class="card">
-            <h2>Welcome to the Network, <span id="userDisplayName"></span>!</h2>
-            <hr style="border: 0.5px solid #333; margin: 20px 0;">
-            <p>The login system has been removed. You are now connected to the database.</p>
-            <p style="color: #888;">Current Project Status: Active</p>
-            <button onclick="location.reload()" style="width: auto; padding: 10px 20px; margin-top: 20px; background: #333;">Sign Out / Exit</button>
+        <div id="chat-header">
+            <h2 style="margin: 0; font-size: 18px;">Live Network Chat</h2>
+            <small id="userTag" style="color: #888;"></small>
+        </div>
+        
+        <div id="messages-container">
+            </div>
+
+        <div id="input-area">
+            <input type="text" id="msgInput" placeholder="Write a message...">
+            <button class="send-btn" onclick="sendMessage()">SEND</button>
         </div>
     </div>
 
     <script>
-        // YOUR FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDazJG_ThTZKb75pyODj1IGMQQeaH7XupQ",
             authDomain: "sujal-networks.firebaseapp.com",
@@ -104,35 +62,58 @@
             appId: "1:835586269526:web:c76ee92b9951499e8176f7"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        let currentUser = "";
 
-        async function joinNetwork() {
+        // 1. JOIN THE APP
+        async function joinApp() {
             const name = document.getElementById('userNameInput').value;
+            if (!name) return alert("Enter a name!");
 
-            if (!name) {
-                alert("Please enter a name first!");
-                return;
-            }
+            currentUser = name;
+            document.getElementById('entry-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+            document.getElementById('userTag').innerText = "Logged in as: " + name;
 
-            try {
-                // 1. Save to Firestore (The 'visitors' folder)
-                await db.collection("visitors").add({
-                    name: name,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                // 2. Hide the entry screen and show the app
-                document.getElementById('entry-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                document.getElementById('userDisplayName').innerText = name;
-
-            } catch (e) {
-                console.error("Error connecting: ", e);
-                alert("Database Error! Make sure you clicked 'Publish' on your Firestore Rules.");
-            }
+            loadMessages();
         }
+
+        // 2. SEND A MESSAGE
+        async function sendMessage() {
+            const text = document.getElementById('msgInput').value;
+            if (!text) return;
+
+            await db.collection("messages").add({
+                user: currentUser,
+                text: text,
+                time: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            document.getElementById('msgInput').value = "";
+        }
+
+        // 3. LISTEN FOR MESSAGES (REAL-TIME)
+        function loadMessages() {
+            db.collection("messages").orderBy("time", "asc")
+              .onSnapshot((snapshot) => {
+                  const container = document.getElementById('messages-container');
+                  container.innerHTML = ""; // Clear for reload
+                  snapshot.forEach((doc) => {
+                      const data = doc.data();
+                      const div = document.createElement('div');
+                      div.className = "msg";
+                      div.innerHTML = `<b>${data.user}</b>${data.text}`;
+                      container.appendChild(div);
+                  });
+                  container.scrollTop = container.scrollHeight; // Auto-scroll
+              });
+        }
+        
+        // Allow "Enter" key to send message
+        document.getElementById("msgInput").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") sendMessage();
+        });
     </script>
 </body>
 </html>
