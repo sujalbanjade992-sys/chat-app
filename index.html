@@ -1,158 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sujal Networks Elite</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sujal Networks</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
-        body { background: #0b0e11; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
-        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .auth-card { background: #15191c; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 350px; text-align: center; }
-        .auth-input { width: 100%; padding: 12px; margin: 10px 0; background: #23272a; border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box; }
-        .auth-btn { width: 100%; padding: 12px; background: #00ff88; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #chat-container { display: none; height: 100vh; width: 100vw; flex-direction: row; }
-        #sidebar { width: 260px; background: #15191c; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; }
-        #main-chat { flex: 1; display: flex; flex-direction: column; background: #0b0e11; }
-        #header { padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
-        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
-        .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; background: #23272a; }
-        .my-message { align-self: flex-end; background: #007bff; }
-        #input-area { padding: 20px; display: flex; gap: 10px; background: #15191c; border-top: 1px solid #333; }
-        input#msg-input { flex: 1; padding: 12px 20px; border-radius: 25px; border: none; background: #23272a; color: white; outline: none; }
-        .user-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-top: 5px; }
-        .active-room { background: #2c2f33; color: #00ff88; border-left: 3px solid #00ff88; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #121212; color: white; margin: 0; }
+        #login-container { background: #1e1e1e; padding: 2rem; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input { padding: 10px; width: 80%; margin-bottom: 1rem; border-radius: 4px; border: none; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #main-content { display: none; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="auth-overlay">
-        <div class="auth-card">
-            <h2 style="color: #00ff88; margin:0;">SUJAL NETWORKS</h2>
-            <p style="opacity: 0.6; font-size: 0.8rem; margin-bottom:20px;">ELITE ACCESS ONLY</p>
-            <input type="email" id="auth-email" class="auth-input" placeholder="Email">
-            <input type="password" id="auth-password" class="auth-input" placeholder="Password (min 6 chars)">
-            <button class="auth-btn" onclick="handleAuth('login')">LOGIN</button>
-            <button class="auth-btn" style="background:transparent; color:#00ff88; border:1px solid #00ff88;" onclick="handleAuth('signup')">CREATE ACCOUNT</button>
-            <p id="auth-error" style="color:#ff4d4d; font-size:0.8rem; margin-top:10px;"></p>
-        </div>
+    <div id="login-container">
+        <h2>Welcome to Shosho</h2>
+        <p>Just enter your name to start</p>
+        <input type="text" id="userName" placeholder="Your Name">
+        <br>
+        <button onclick="enterApp()">Enter Project</button>
     </div>
 
-    <div id="chat-container">
-        <div id="sidebar">
-            <h2 style="color: #00ff88; margin:0;">SUJAL NETWORKS</h2>
-            <div id="room-global" class="user-item active-room" onclick="changeRoom('global', 'Global Network')">🌐 Global Network</div>
-            <div id="user-list"></div>
-            <button onclick="logout()" style="margin-top:auto; background:none; border:1px solid #ff4d4d; color:#ff4d4d; cursor:pointer;">Logout</button>
-        </div>
-        <div id="main-chat">
-            <div id="header"><h2 id="chat-title">Global Network</h2></div>
-            <div id="chat-box"></div>
-            <div id="input-area">
-                <input type="text" id="msg-input" placeholder="Message..." oninput="handleTyping()">
-                <button onclick="sendMessage()" style="background:#00ff88; border:none; padding:10px 25px; border-radius:25px; font-weight:bold;">SEND</button>
-            </div>
-        </div>
+    <div id="main-content">
+        <h1>Welcome, <span id="display-name"></span>!</h1>
+        <p>The login system is gone. Everything is working now.</p>
     </div>
 
     <script>
-        // THIS IS THE CORRECT CDN CONFIG
+        // Your specific config
         const firebaseConfig = {
-            apiKey: "AIzaSyDazJG_ThTZKb7SpyDDJ1IGMQQeaH7XupQ",
+            apiKey: "AIzaSyDazJG_ThTZKb75pyODj1IGMQQeaH7XupQ",
             authDomain: "sujal-networks.firebaseapp.com",
             projectId: "sujal-networks",
             storageBucket: "sujal-networks.firebasestorage.app",
             messagingSenderId: "835586269526",
-            appId: "1:835586269526:web:c76ee92b9951499e8176f7",
-            measurementId: "G-9M8631HMKX"
+            appId: "1:835586269526:web:c76ee92b9951499e8176f7"
         };
-        
-        // Safety Check
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        
-        const auth = firebase.auth();
-        const socket = io();
-        let myName = "";
-        let target = 'global';
-        let chatMemory = { 'global': [] };
 
-        async function handleAuth(type) {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const errorEl = document.getElementById('auth-error');
-            errorEl.innerText = "Connecting...";
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function enterApp() {
+            const name = document.getElementById('userName').value;
+
+            if (name.trim() === "") {
+                alert("Please enter a name!");
+                return;
+            }
+
             try {
-                if (type === 'signup') { await auth.createUserWithEmailAndPassword(email, password); } 
-                else { await auth.signInWithEmailAndPassword(email, password); }
-            } catch (error) { errorEl.innerText = error.message; }
-        }
+                // Just save the name to your database
+                await db.collection("visitors").add({
+                    name: name,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                myName = user.email.split('@')[0]; 
-                document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('chat-container').style.display = 'flex';
-                socket.emit('login', myName);
-            } else {
-                document.getElementById('auth-overlay').style.display = 'flex';
-                document.getElementById('chat-container').style.display = 'none';
-            }
-        });
-
-        function logout() { auth.signOut().then(() => location.reload()); }
-
-        document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
-
-        function sendMessage() {
-            const input = document.getElementById('msg-input');
-            if(input.value.trim()) {
-                socket.emit('chat message', { text: input.value, target: target });
-                input.value = '';
+                // Hide login, show content
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('display-name').innerText = name;
+                document.getElementById('main-content').style.display = 'block';
+                
+                console.log("Success! No Auth needed.");
+            } catch (error) {
+                console.error("Error: ", error);
+                alert("Check your Firebase Rules! Make sure they are set to 'allow read, write: if true;'");
             }
         }
-
-        socket.on('chat message', (data) => {
-            let roomKey = data.target === 'global' ? 'global' : (data.senderId === socket.id ? data.target : data.senderId);
-            if (!chatMemory[roomKey]) chatMemory[roomKey] = [];
-            chatMemory[roomKey].push(data);
-            if (roomKey === target) renderMessage(data);
-        });
-
-        function renderMessage(data) {
-            const chatBox = document.getElementById('chat-box');
-            const isMe = data.name === myName;
-            const div = document.createElement('div');
-            div.className = `message ${isMe ? 'my-message' : ''}`;
-            div.innerHTML = `<div style="font-size:0.7rem; opacity:0.7;">${isMe ? 'YOU' : data.name}</div><div>${data.text}</div>`;
-            chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        socket.on('update user list', (users) => {
-            document.getElementById('user-list').innerHTML = users
-                .filter(u => u.name !== myName)
-                .map(u => `<div id="room-${u.id}" class="user-item" onclick="changeRoom('${u.id}', '${u.name}')">👤 ${u.name}</div>`)
-                .join('');
-        });
-
-        function changeRoom(id, name) {
-            target = id;
-            document.getElementById('chat-title').innerText = target === 'global' ? name : "DM: " + name;
-            document.getElementById('chat-box').innerHTML = '';
-            if (chatMemory[target]) chatMemory[target].forEach(msg => renderMessage(msg));
-        }
-
-        socket.on('load history', (history) => {
-            chatMemory['global'] = history;
-            if(target === 'global') {
-                document.getElementById('chat-box').innerHTML = '';
-                history.forEach(msg => renderMessage(msg));
-            }
-        });
-
-        function handleTyping() { socket.emit('typing', { target: target, isTyping: true }); }
     </script>
 </body>
 </html>
